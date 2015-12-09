@@ -5,12 +5,29 @@ const {isArray} = Array;
 
 const maybeExecute = (maybeFn, arg) => isFunction(maybeFn) ? maybeFn(arg) : maybeFn;
 
-const cloneShallow = value => isArray(value) ? [...value] : {...value};
+const cloneArrayShallow = arr => {
+    const len = arr.length;
+    const ret = new Array(len);
+    for (let i = 0; i < len; i++) {
+        ret[i] = len[i];
+    }
+    return ret;
+};
+
+const cloneObjectShallow = obj => {
+    const ret = {};
+    // no hasOwnProperty on purpose, for performance
+    for (let key in obj) {
+        ret[key] = obj[key];
+    }
+    return ret;
+};
+
+const cloneShallow = value => isArray(value) ? cloneArrayShallow(value) : cloneObjectShallow(value);
 
 const cacheKey = '__cache__';
-const baseKey = '__base__';
 
-const withMutations = (obj, fn) => {
+export const withMutations = (obj, fn) => {
     const cache = {};
     obj[cacheKey] = cache;
     const cloned = cloneShallow(fn(obj));
@@ -26,7 +43,7 @@ const withMutations = (obj, fn) => {
     return cloned;
 };
 
-export const update = (obj, path, fn, cache) => {
+export const update = (obj, path, fn) => {
  
     path = isString(path) ? path.split('.') : path;
     
@@ -60,27 +77,14 @@ export const update = (obj, path, fn, cache) => {
         // move deeper
         cur = cur[p];
     }
- 
+
     const last = path[len - 1];
     cur[last] = maybeExecute(fn, cur[last]);
- 
+
     return cloned;
 };
 
 export const set = update;
 
-export const get = (obj, path) => {
-    path = isString(path) ? path.split('.') : path;
-    const len = path.length;
-    let cur = obj;
-    for (let i = 0; i < len; i++) {
-        const c = cur[path[i]];
-        if (isUndefined(c)) {
-            return;
-        }
-        cur = c;
-    }
-    return cur;
-};
+export default {update, set, withMutations};
 
-export default {update, get, set}
