@@ -1,10 +1,10 @@
 import imm from 'immutable';
+import simm from 'seamless-immutable';
 import {set} from './index';
 
 let x = 0;
-const time = (fn, desc = `test ${x++}`) => {
+const time = (fn, desc = `test ${x++}`, numTests = 100) => {
     let t = 0;
-    const numTests = 10000;
     for (let i = 0; i < numTests; i++) {
         const now = performance.now();
         fn();
@@ -28,14 +28,19 @@ const time = (fn, desc = `test ${x++}`) => {
 // let result2 = time(() => set(mock, ['wat40', 'a'], 1000), 'object:native');
 // console.log('object:immutable/native:', (100 * result1 / result2).toFixed(3) + '%');
 
-let mock = [];
+let mock = {};
+let obj = {};
 for (let i = 0; i < 1000; i++) {
-    mock[i] = {a: i};
+    obj['x' + i] = i;
 }
-
+for (let i = 0; i < 1000; i++) {
+    mock['y' + i] = obj;
+}
 let imock = imm.fromJS(mock);
-
-let result1 = time(() => imock.setIn([40, 'a'], 1000), 'array:immutablejs');
-let result2 = time(() => set(mock, [40, 'a'], 1000), 'array:native');
-console.log('arrayimmutable/native:', (100 * result1 / result2).toFixed(3) + '%');
+let simock = simm(mock);
+let result1 = time(() => imock.setIn(['y20', 'x10'], 100), 'array:immutablejs');
+let result2 = time(() => set(mock, ['y20', 'x10'], 100), 'array:native');
+let result3 = time(() => simock.merge({y20: {x10: 100}}, {deep: true}), 'array:seamless-immutable');
+console.log('array:immutable/native:', (100 * result1 / result2).toFixed(3) + '%');
+console.log('array:seamless/native:', (100 * result3 / result2).toFixed(3) + '%');
 
