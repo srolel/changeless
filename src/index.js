@@ -3,37 +3,54 @@ const isUndefined = value => value === undefined;
 const isUndefinedOrNull = value => value == undefined;
 const isString = value => typeof value === 'string';
 const {isArray} = Array;
-const isObject = val => val && typeof val === 'object';
-
-export const maybeExecute = (maybeFn, arg) => isFunction(maybeFn) ? maybeFn(arg) : maybeFn;
+const isObject = value => value && typeof value === 'object';
+const sliceArguments = function() {
+    Array.prototype.slice.apply.apply(null, arguments);
+};
+const maybeExecute = (maybeFn, arg) =>
+    isFunction(maybeFn) ? maybeFn(arg) : maybeFn;
 
 const cacheKey = '__changeless__cache__';
+
 const clonerKey = '__changeless__cloner__';
 
-const createCloner = obj => {
-  const keys = Object.keys(obj);
-  var objDef = '{';
-  for (var i = 0, len = keys.length; i < len; i++) {
-     const key = keys[i];
-     objDef += `'${key}': obj['${key}'],`;
-  }
-  objDef += '}';
-  const cloner = Function('obj', 'return ' + objDef);
-  addPropertyTo(obj, clonerKey, cloner);
-  return cloner;
-}
-
-const addPropertyTo = (target, methodName, value) =>
-    Object.defineProperty(target, methodName, {
-      enumerable: false,
-      configurable: true,
-      writable: true,
-      value: value
+const addPropertyTo = (target, methodName, value) => Object.defineProperty(
+    target, methodName, {
+        enumerable: false,
+        configurable: true,
+        writable: true,
+        value: value
     });
 
-// exported as object to be spyable in tests
-export const clone = {
-    array(arr) {
+// exporting for tests
+export const fns = {
+
+    // generates a structured clone function for a given object
+    createCloner(obj) {
+        const keys = Object.keys(obj);
+        var objDef = '{';
+        for (var i = 0, len = keys.length; i < len; i++) {
+            const key = keys[i];
+            objDef += `'${key}': obj['${key}'],`;
+        }
+        objDef += '}';
+        return Function('obj', 'return ' + objDef);
+    },
+
+    // clones object using the generated cloner.
+    // saves that cloner as a property the object and clone
+    cloneObject(obj) {
+        let cloner = obj[clonerKey];
+        if (!cloner) {
+            cloner = fns.createCloner(obj);
+            addPropertyTo(obj, clonerKey, cloner);
+        }
+        const clone = cloner(obj);
+        addPropertyTo(clone, clonerKey, cloner);
+        return clone;
+    },
+
+    cloneArray(arr) {
         const len = arr.length;
         const ret = new Array(len);
         for (let i = 0; i < len; i++) {
@@ -42,95 +59,76 @@ export const clone = {
         return ret;
     },
 
-    /*
-    * leverage prototype chain. todo: see if this prevents garbage collection and if so,
-    * figure out how to solve it because this is a huge performance boost.
-    */
-    // object: Object.create,
+    cloneShallow(value) {
+        return isArray(value) ? fns.cloneArray(value) : fns.cloneObject(value);
+    },
 
-    /*
-    * simplest. also, slow as shit.
-    */
-    //  object(obj) {
-    //     const ret = {};
-    //     const keys = Object.keys(obj);
-    //     for (let i = 0, len = keys.length; i < len; i++) {
-    //         const key = keys[i];
-    //         ret[key] = obj[key];
-    //     }
-    //     return ret;
-    // }
+    // define a cache for changes. changes won't happen until applyMutation is called
+    stageMutations(obj) {
+        addPropertyTo(obj, cacheKey, {});
+        return obj;
+    },
 
-    object(obj) {
-        let cloner = obj[clonerKey];
-        if (!cloner) {
-            cloner = createCloner(obj);
+    // apply stages mutations
+    applyMutations(obj) {
+        const cache = obj[cacheKey];
+        obj[cacheKey] = null;
+        const clone = fns.cloneShallow(obj);
+        const keys = Object.keys(cache);
+        for (let i = 0, len = keys.length; i < len; i++) {
+            const p = keys[i];
+            const cur = cache[p];
+            cur[p] = fns.cloneShallow(cur[p]);
         }
-        const clone = cloner(obj);
-        addPropertyTo(clone, clonerKey, cloner);
         return clone;
-    }
-};
+    },
 
-export const cloneShallow = value => isArray(value) ? clone.array(value) : clone.object(value);
-
-export const stageMutations = obj => {
-    addPropertyTo(obj, cacheKey, {});
-    return obj;
-};
-
-export const applyMutations = obj => {
-    const cache = obj[cacheKey];
-    obj[cacheKey] = null;
-    const clone = cloneShallow(obj);
-    const keys = Object.keys(cache);
-    for (let i = 0, len = keys.length; i < len; i++) {
-        const p = keys[i];
-        const cur = cache[p];
-        cur[p] = cloneShallow(cur[p]);
-    }
-    return clone;
-};
-
-export const withMutations = (obj, fn) => {
-    stageMutations(obj);
-    fn(obj);
-    return applyMutations(obj);
-};
-
-/*
-* not in use currently
-*/
-const get = (obj, path) => {
-    for (let i = 0, len = path.len; i < len; i++) {
-            if (isUndefinedOrNull(obj)) {
-                return;
+    // traverse an object. accepts a callback which will be called for each node,
+    // with the value and current path to the node from the root object, as well
+    // as a third value to be true if the node is an object.
+    traverse(obj, cb, context = '') {
+        const keys = Object.keys(obj);
+        for (let i = 0, len = keys.length; i < len; i++) {
+            const key = keys[i];
+            const path = context ? context + '.' + key : key;
+            const val = obj[key];
+            if (isObject(val)) {
+                fns.traverse(val, cb, path);
+                cb(val, path, true);
+            } else {
+                cb(val, path);
             }
-            obj = obj[path[i]];
-    }
-    return obj;
+        }
+    },
+
+    // deep freeze an object, convenient for development.
+    freeze(obj) {
+        Object.freeze(obj);
+        fns.traverse(obj, (val, path, isObject) =>
+            isObject && Object.freeze(path));
+        return obj;
+    },
 }
 
-/* 
-* note that objects will be updated even if the
-* value to update is the same as the current value in path
-*/
+const isChangeless = obj => obj instanceof Changeless;
+
 export const update = (obj, path, fn) => {
-    path = isString(path) ? path.split('.') : path;
 
-    const cache = obj[cacheKey];
-
-    let cloned = obj;
-    if (!cache) {
-        cloned = cloneShallow(obj);
+    if (isChangeless(obj)) {
+        return obj.update(path, fn);
     }
 
+    path = isString(path) ? path.split('.') : path;
+    const cache = obj[cacheKey];
+    let cloned = obj;
+    if (!cache) {
+        cloned = fns.cloneShallow(obj);
+    }
     let cur = cloned;
     const len = path.length;
     for (let i = 0; i < len - 1; i++) {
         const p = path[i];
         const c = cur[p];
-
         // create a copy of the current level
         // or create a new level if it doesn't exist or it it's not an object
         if (isUndefined(c) || !isObject(c)) {
@@ -139,72 +137,115 @@ export const update = (obj, path, fn) => {
             if (cache) {
                 cache[p] = cur;
             } else {
-                cur[p] = cloneShallow(c);
+                cur[p] = fns.cloneShallow(c);
             }
         }
-
         // move deeper
         cur = cur[p];
     }
-
     const last = path[len - 1];
     if (cur[clonerKey] && !cur.hasOwnProperty(last)) {
         cur[clonerKey] = null;
     }
     cur[last] = maybeExecute(fn, cur[last]);
-
     return cloned;
 };
 
-export const set = update;
+export const withMutations = (obj, fn) => {
 
-const traverse = (obj, cb, context = '') => {
-    const keys = Object.keys(obj);
-    for (let i = 0, len = keys.length; i < len; i++) {
-        const key = keys[i];
-        context = context ? context + '.' : '';
-        const path = context + key;
-        const val = obj[key];
-        if (isObject(val)) {
-            traverse(val, cb, path);
-            cb(val, path, true);
-        } else {
-            cb(val, path);
-        }
+    if (isChangeless(obj)) {
+        return obj.withMutations(fn);
     }
-};
 
-export const freeze = obj => {
-
-    Object.freeze(obj);
-
-    traverse(obj, (val, path, isObject) =>
-        isObject && Object.freeze(path));
-
-    return obj;
-};
+    fns.stageMutations(obj);
+    fn(new Changeless(obj));
+    return fns.applyMutations(obj);
+}
 
 export const merge = function() {
 
-    const cache = {};
+    const obj = arguments[0];
 
-    const traverser = (val, path) => {
-        if (!cache[path]) {
+    if (isChangeless(obj)) {
+        const args = sliceArguments(arguments, 1);
+        return obj.merge.apply(null, args);
+    }
+
+    let cache = obj[cacheKey];
+    let isMutable = true;
+
+    if (!cache) {
+        isMutable = false;
+        cache = {};
+    }
+
+    const traverser = (val, path, isObject) => {
+        if (!isObject && !cache[path]) {
             cache[path] = val;
         }
     };
 
     for (let i = arguments.length - 1; i > 0; i--) {
-        traverse(arguments[i], traverser);
+        fns.traverse(arguments[i], traverser);
     }
 
-    return withMutations(arguments[0], obj => {
-        const keys = Object.keys(obj);
-        for (let i = 0, len = keys.length; i < len; i++) {
-            const key = keys[i];
-            set(obj, key, cache[key]);
-        }
+    return isMutable
+        ? obj
+        : withMutations(obj, o => {
+            const keys = Object.keys(cache);
+            for (let i = 0, len = keys.length; i < len; i++) {
+                const key = keys[i];
+                o.set(key, cache[key]);
+            }
     });
 };
 
-export default {update, set, withMutations, merge};
+export const set = update;
+
+const publicAPI = {merge, update, set, withMutations};
+
+const proxify = (target, source) => {
+    const keys = Object.keys(source);
+    for (let i = 0, len = keys.length; i < len; i++) {
+        const key = keys[i];
+        Object.defineProperty(target, key, {
+            get(key) {
+                return source[key];
+            }
+        });
+    }
+}
+
+const Changeless = function Changeless(context, {proxy} = {}) {
+
+    if (isChangeless(context)) {
+        return context;
+    }
+
+    // "call constructor"
+    if (!isChangeless(this)) {
+        return new Changeless(context)
+    }
+
+    this._context = context;
+
+    if (proxy) {
+        proxify(this, context);
+    }
+
+}
+
+Changeless.prototype.value = function() {
+    return this._context;
+};
+
+Object.keys(publicAPI).forEach(key => {
+    Changeless[key] = publicAPI[key];
+    Changeless.prototype[key] = function() {
+        const args = [this._context, ...arguments];
+        this._context = publicAPI[key].apply(null, args);
+        return this;
+    }
+});
+
+export default Changeless;

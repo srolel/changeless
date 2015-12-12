@@ -30,14 +30,16 @@ const time = (fn, desc = `test ${x++}`, numTests = 100) => {
 
 let mock = {};
 let obj = {};
-for (let i = 0; i < 1000; i++) {
+for (let i = 0; i < 100; i++) {
     obj['x' + i] = i;
 }
-for (let i = 0; i < 1000; i++) {
+for (let i = 0; i < 100; i++) {
     mock['y' + i] = obj;
 }
-let imock = imm.fromJS(mock);
-let simock = simm(mock);
+let imock;
+let simock;
+time(() => imock = imm.fromJS(mock), 'immutablejs creation', 10);
+time(() => simock = simm(mock), 'seamless creation', 10);
 let result1 = time(() => imock.setIn(['y20', 'x10'], 100), 'array:immutablejs');
 let result2 = time(() => set(mock, ['y20', 'x10'], 100), 'array:native');
 let result3 = time(() => simock.merge({y20: {x10: 100}}, {deep: true}), 'array:seamless-immutable');
