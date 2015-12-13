@@ -12,6 +12,8 @@ const sliceArguments = (args, start, end) =>
 const maybeExecute = (maybeFn, arg) =>
     isFunction(maybeFn) ? maybeFn(arg) : maybeFn;
 
+const pathToArray = path => isString(path) ? path.split('.') : path;
+
 const cacheKey = '__changeless__cache__';
 const clonerKey = '__changeless__cloner__';
 const didChange = '__changeless__did__change__';
@@ -188,22 +190,22 @@ export const fns = {
     walkPathInObject(obj, path, cb, cache) {
         const hasCache = isObject(cache);
 
-        const arrayPath = isString(path) ? path.split('.') : path;
-        const len = arrayPath.length;
+        const arrayPath = pathToArray(path);
         let curObj = obj;
         let curCache = cache;
-        for (let i = 0; i < len - 1; i++) {
-            const p = arrayPath[i];
-            cb(curCache || curObj, p);
-            curObj = !isUndefinedOrNull(curObj) && curObj[p];
-            if (hasCache) {
-                curCache = curCache[p];
-            }
-        }
 
-        const last = arrayPath[len - 1];
-        const value = !isUndefinedOrNull(curObj) && curObj[last];
-        cb(curCache || curObj, last, curObj[last]);
+        fns.iterateArray(arrayPath, (p, i, arr) => {
+            const context = curCache || curObj;
+            if (i === arr.length - 1) {
+                cb(context, p, context[i]);
+            } else {
+                cb(context, p);
+                curObj = curObj[p];
+                if (hasCache) {
+                    curCache = curCache[p];
+                }
+            }
+        });
     },
 
     // deep freeze an object, convenient for development.
@@ -253,7 +255,8 @@ export const update = (obj, path, fn) => {
         return obj.update(path, fn);
     }
 
-    const arrayPath = isString(path) ? path.split('.') : path;
+    const arrayPath = pathToArray(path);
+
     const cache = obj[cacheKey];
 
     const cloned = cache ? obj : fns.cloneShallow(obj);
