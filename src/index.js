@@ -1,6 +1,5 @@
 const isFunction = value => typeof value === 'function';
 const isUndefined = value => value === undefined;
-const isUndefinedOrNull = value => value == undefined;
 const isString = value => typeof value === 'string';
 const {isArray} = Array;
 const isArrayLike = value => length in value;
@@ -78,10 +77,7 @@ export const fns = {
 
     iterateArray(arr, cb) {
         for (let i = 0, len = arr.length; i < len; i++) {
-            const result = cb(arr[i], i, arr);
-            if (result === true) {
-                return arr[i];
-            }
+            cb(arr[i], i, arr);
         }
     },
 
@@ -89,10 +85,7 @@ export const fns = {
         const keys = Object.keys(obj);
         for (let i = 0, len = keys.length; i < len; i++) {
             const key = keys[i];
-            const result = cb(obj[key], key, obj);
-            if (result === true) {
-                return obj[key];
-            }
+            cb(obj[key], key, obj);
         }
     },
 
@@ -130,7 +123,7 @@ export const fns = {
             if (val !== didChange) {
                 fns.walkPathInObject(cloned, path, fns.getPathUpdater(val, true));
             }
-        })
+        });
 
 
         return cloned;
@@ -141,7 +134,7 @@ export const fns = {
 
         const doTraverse = obj => fns.traverse(
             obj,
-            (value, key, path, obj, isObj) =>
+            (value, key, path) =>
                 !changes.hasOwnProperty(path) && (changes[path] = value)
         );
 
@@ -149,7 +142,7 @@ export const fns = {
         if (arguments.length === 1) {
             doTraverse(arguments[0]);
         } else {
-            fns.iterateArrayRight(arguments, doTraverse)
+            fns.iterateArrayRight(arguments, doTraverse);
         }
 
         return changes;
@@ -184,11 +177,11 @@ export const fns = {
                 // obj[key] instead of val to take changes as we traverse into account
                 fns.traverse(obj[key], cb, path);
             }
-        })
+        });
     },
 
     walkPathInObject(obj, path, cb, cache) {
-        const hasCache = isObject(cache);
+        const withCache = isObject(cache);
 
         const arrayPath = pathToArray(path);
         let curObj = obj;
@@ -201,7 +194,7 @@ export const fns = {
             } else {
                 cb(context, p);
                 curObj = curObj[p];
-                if (hasCache) {
+                if (withCache) {
                     curCache = curCache[p];
                 }
             }
@@ -211,8 +204,8 @@ export const fns = {
     // deep freeze an object, convenient for development.
     freeze(obj) {
         Object.freeze(obj);
-        fns.traverse(obj, (val, path, isObject) =>
-            isObject && Object.freeze(path));
+        fns.traverse(obj, (val, path, isObj) =>
+            isObj && Object.freeze(path));
         return obj;
     },
 
@@ -235,27 +228,16 @@ export const fns = {
                     context[key] = value;
                     break;
             }
-        }
+        };
     }
 };
 
-export const map = (obj, fn) => {
 
-    if (isChangeless(obj)) {
-        return obj.map(fn);
-    }
-
-    fns.iterate(obj, (val, key, obj) => {
-        set(val, key, fn(val, key, obj));
-    })
-};
 
 export const update = (obj, path, fn) => {
     if (isChangeless(obj)) {
         return obj.update(path, fn);
     }
-
-    const arrayPath = pathToArray(path);
 
     const cache = obj[cacheKey];
 
@@ -287,7 +269,7 @@ export const withMutations = function(obj, fn) {
     return hasCache(obj)
         ? mutated
         : changeless.value();
-}
+};
 
 export const merge = function() {
 
@@ -304,12 +286,23 @@ export const merge = function() {
         args.unshift(cache);
         fns.mutateMerge.apply(null, args);
     } else {
-        const changes = fns.getMergerChanges.apply(null, args);  
+        const changes = fns.getMergerChanges.apply(null, args);
         return fns.applyMutations(obj, changes);
     }
 };
 
 export const set = update;
+
+export const map = (obj, fn) => {
+
+    if (isChangeless(obj)) {
+        return obj.map(fn);
+    }
+
+    fns.iterate(obj, (val, key, object) => {
+        set(val, key, fn(val, key, object));
+    });
+};
 
 const publicAPI = {merge, update, set, map, withMutations};
 
@@ -323,12 +316,12 @@ const Changeless = function Changeless(context, actions) {
 
     // "call constructor"
     if (!isChangeless(this)) {
-        return new Changeless(context, actions)
+        return new Changeless(context, actions);
     }
 
     this.__wrapped__ = context;
     this.__actions__ = actions || [];
-}
+};
 
 Changeless.prototype.value = function() {
 
@@ -343,6 +336,11 @@ Changeless.prototype.value = function() {
 
 };
 
+Changeless.prototype.plant = function(context) {
+    this.__wrapped__ = context;
+    return this;
+};
+
 fns.iterateObject(publicAPI, (val, key) => {
     Changeless[key] = val;
     Changeless.prototype[key] = function() {
@@ -351,7 +349,7 @@ fns.iterateObject(publicAPI, (val, key) => {
             return val.apply(this, args);
         });
         return this;
-    }
-})
+    };
+});
 
 export default Changeless;
