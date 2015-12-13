@@ -16,14 +16,6 @@ const cacheKey = '__changeless__cache__';
 const clonerKey = '__changeless__cloner__';
 const didChange = '__changeless__did__change__';
 
-const iterateObject = (obj, cb) => {
-    const keys = Object.keys(obj);
-    for (let i = 0, len = keys.length; i < len; i++) {
-        const key = keys[i];
-        cb(obj[key], key);
-    }
-};
-
 const addPropertyTo = (target, methodName, value) => Object.defineProperty(
     target, methodName, {
         enumerable: false,
@@ -41,7 +33,7 @@ export const fns = {
     createCloner(obj) {
         var objDef = '{';
 
-        iterateObject(obj, (val, key) =>
+        fns.iterateObject(obj, (val, key) =>
             objDef += `'${key}': obj['${key}'],`);
 
         objDef += '}';
@@ -122,7 +114,7 @@ export const fns = {
         const cloned = fns.cloneShallow(object);
 
         fns.traverse(cloned, (val, key, path, obj, isObj) => {
-            if (path in changesToApply) {
+            if (changesToApply.hasOwnProperty(path)) {
                 if (isObj) {
                     obj[key] = fns.cloneShallow(obj[key]);
                 } else {
@@ -132,7 +124,7 @@ export const fns = {
             }
         });
 
-        iterateObject(changesToApply, (val, path) => {
+        fns.iterateObject(changesToApply, (val, path) => {
             if (val !== didChange) {
                 fns.walkPathInObject(cloned, path, fns.getPathUpdater(val, true));
             }
@@ -142,14 +134,13 @@ export const fns = {
         return cloned;
     },
 
-
     getMergerChanges() {
         const changes = {};
 
         const doTraverse = obj => fns.traverse(
             obj,
             (value, key, path, obj, isObj) =>
-                !(path in changes) &&(changes[path] = value)
+                !changes.hasOwnProperty(path) && (changes[path] = value)
         );
 
         // collect changes
@@ -181,7 +172,7 @@ export const fns = {
     // as a third value to be true if the node is an object.
 
     traverse(obj, cb, context = '') {
-        iterateObject(obj, (val, key) => {
+        fns.iterateObject(obj, (val, key) => {
 
             const path = context ? context + '.' + key : key;
             const isObj = isObject(val);
@@ -194,7 +185,8 @@ export const fns = {
         })
     },
 
-    walkPathInObjectWithCache(obj, path, cb, cache) {
+    walkPathInObject(obj, path, cb, cache) {
+        const hasCache = isObject(cache);
 
         const arrayPath = isString(path) ? path.split('.') : path;
         const len = arrayPath.length;
@@ -202,33 +194,16 @@ export const fns = {
         let curCache = cache;
         for (let i = 0; i < len - 1; i++) {
             const p = arrayPath[i];
-            cb(curCache, p, i);
+            cb(curCache || curObj, p);
             curObj = !isUndefinedOrNull(curObj) && curObj[p];
-            curCache = !isUndefinedOrNull(curCache) && curCache[p];
+            if (hasCache) {
+                curCache = curCache[p];
+            }
         }
 
         const last = arrayPath[len - 1];
         const value = !isUndefinedOrNull(curObj) && curObj[last];
-        cb(curCache, last, len - 1, value);
-    },
-
-    walkPathInObject(obj, path, cb, cache) {
-        if (isObject(cache)) {
-            return fns.walkPathInObjectWithCache(obj, path, cb, cache);
-        }
-
-        const arrayPath = isString(path) ? path.split('.') : path;
-        const len = arrayPath.length;
-        let curObj = obj;
-        for (let i = 0; i < len - 1; i++) {
-            const p = arrayPath[i];
-            cb(curObj, p, i);
-            curObj = !isUndefinedOrNull(curObj) && curObj[p];
-        }
-
-        const last = arrayPath[len - 1];
-        const value = !isUndefinedOrNull(curObj) && curObj[last];
-        cb(curObj, last, len - 1, curObj[last]);
+        cb(curCache || curObj, last, curObj[last]);
     },
 
     // deep freeze an object, convenient for development.
@@ -240,11 +215,10 @@ export const fns = {
     },
 
     getPathUpdater(fn, dontClone) {
-        return function(context, key, path, currentValue) {
+        return function(context, key, currentValue) {
             switch (arguments.length) {
                 // inner object
                 case 2:
-                case 3:
                     let c = context[key];
                     if (isUndefined(c) || !isObject(c)) {
                         c = context[key] = {};
@@ -254,7 +228,7 @@ export const fns = {
                     }
                     break;
                 // value to set
-                case 4:
+                case 3:
                     const value = maybeExecute(fn, currentValue);
                     context[key] = value;
                     break;
@@ -262,8 +236,6 @@ export const fns = {
         }
     }
 };
-
-const isChangeless = obj => obj instanceof Changeless;
 
 export const map = (obj, fn) => {
 
@@ -275,8 +247,6 @@ export const map = (obj, fn) => {
         set(val, key, fn(val, key, obj));
     })
 };
-
-
 
 export const update = (obj, path, fn) => {
     if (isChangeless(obj)) {
@@ -340,16 +310,7 @@ export const set = update;
 
 const publicAPI = {merge, update, set, map, withMutations};
 
-// const proxify = (target) => {
-//     iterateObject(target.__wrapped__, (val, key) =>
-//         Object.defineProperty(target, key, {
-//             get() {
-//                 return target.__wrapped__[key];
-//             },
-//             enumerable: true,
-//             configurable: true
-//         }));
-// }
+const isChangeless = obj => obj instanceof Changeless;
 
 const Changeless = function Changeless(context, actions) {
 
@@ -364,12 +325,6 @@ const Changeless = function Changeless(context, actions) {
 
     this.__wrapped__ = context;
     this.__actions__ = actions || [];
-    // this._config = opts;
-
-    // if (opts.proxy) {
-    //     proxify(this);
-    // }
-
 }
 
 Changeless.prototype.value = function() {
@@ -385,7 +340,7 @@ Changeless.prototype.value = function() {
 
 };
 
-iterateObject(publicAPI, (val, key) => {
+fns.iterateObject(publicAPI, (val, key) => {
     Changeless[key] = val;
     Changeless.prototype[key] = function() {
         this.__actions__.push(obj => {
