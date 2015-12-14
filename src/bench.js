@@ -1,14 +1,32 @@
 import imm from 'immutable';
 import simm from 'seamless-immutable';
-import {set} from './index';
+import {set, fns} from './index';
+import _ from 'lodash';
+if (!global.regeneratorRuntime)
+require('babel-polyfill');
+    // _.forEach(fns, (val, key) => {
+    //     fns[key] = function() {
+    //         const now = performance.now();
+    //         const ret = val.apply(null, arguments);
+    //         fns[key].meta.calls++;
+    //         fns[key].meta.time += performance.now() - now;
+    //         return ret;
+    //     };
+    //     fns[key].meta = {calls: 0, time: 0};
+    //     fns[key].restore = () => fns[key] = val;
+
+    // });
+
+const delay = ms => new Promise((resolve) => setTimeout(resolve, ms))
 
 let x = 0;
-const time = (fn, desc = `test ${x++}`, numTests = 1000) => {
+const time = async function(fn, desc = `test ${x++}`, numTests = 10) {
     let t = 0;
     for (let i = 0; i < numTests; i++) {
-        const now = performance.now();
-        fn();
-        t += (performance.now() - now) / numTests;
+;        await delay(i * 10);
+        const now = performance.now()
+        fn()
+;        t += (performance.now() - now) / numTests;
     }
     t = t.toFixed(7);
     console.log(desc + ':', t + 'ms');
@@ -30,16 +48,27 @@ const time = (fn, desc = `test ${x++}`, numTests = 1000) => {
 
 let mock = [];
 let obj = {};
-for (let i = 0; i < 100; i++) {
+for (let i = 0; i < 1000; i++) {
     obj['x' + i] = i;
 }
-for (let i = 0; i < 100; i++) {
+for (let i = 0; i < 1000; i++) {
     mock[i] = obj;
 }
 let imock = imm.fromJS(mock);
-let result1 = time(() => imock.setIn(['y20', 'x10'], 100), 'array:immutablejs');
-let result2 = time(() => set(mock, ['y20', 'x10'], 100), 'array:native');
+
+async function bench() {
+let result1 = await time(() => imock.setIn(['y20', 'x10'], 100), 'array:immutablejs');
+let result2 = await time(() => set(mock, ['y20', 'x10'], 100), 'array:native');
+
 // let result3 = time(() => simock.merge({y20: {x10: 100}}, {deep: true}), 'array:seamless-immutable');
 console.log('array:immutable/native:', (100 * result1 / result2).toFixed(3) + '%');
+}
+
+bench();
 // console.log('array:seamless/native:', (100 * result3 / result2).toFixed(3) + '%');
 
+    // _.forEach(fns, (val, key) => {
+    //     const avgTime = fns[key].meta.time / fns[key].meta.calls;
+    //     if (avgTime) console.log(key, avgTime)
+    //     fns[key].restore();
+    // });
