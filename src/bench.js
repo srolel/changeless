@@ -20,10 +20,10 @@ require('babel-polyfill');
 const delay = ms => new Promise((resolve) => setTimeout(resolve, ms))
 
 let x = 0;
-const time = async function(fn, desc = `test ${x++}`, numTests = 10) {
+const time = async function(fn, desc = `test ${x++}`, numTests = 100) {
     let t = 0;
     for (let i = 0; i < numTests; i++) {
-;        await delay(i * 10);
+;        await delay(i * 0.5);
         const now = performance.now()
         fn()
 ;        t += (performance.now() - now) / numTests;

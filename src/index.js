@@ -54,20 +54,8 @@ export const fns = {
         return clone;
     },
 
-    // cloneObject: Object.create,
-
     cloneArray(arr) {
-        const b = new Array(arr.length);
-let i = arr.length;
-while(i--) { b[i] = arr[i]; }
-return b;
-        // return arr.slice(0);
-        // const len = arr.length;
-        // const ret = new Array(len);
-        // for (let i = 0; i < len; i++) {
-        //     ret[i] = arr[i];
-        // }
-        // return ret;
+        return arr.slice(0);
     },
 
     cloneShallow(value) {
