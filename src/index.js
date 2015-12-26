@@ -1,9 +1,11 @@
+let __DEV__ = process.env.NODE_ENV !== 'production';
+
 const isFunction = value => typeof value === 'function';
 const isUndefined = value => value === undefined;
 const isString = value => typeof value === 'string';
 const {isArray} = Array;
 const isArrayLike = value => length in value;
-const isObject = value => value && typeof value === 'object';
+const isObject = value => typeof value === 'object';
 
 const sliceArguments = (args, start, end) =>
     Array.prototype.slice.apply(args, [start, end]);
@@ -13,10 +15,12 @@ const maybeExecute = (maybeFn, arg) =>
 
 const pathToArray = path => isString(path) ? path.split('.') : path;
 
+// Symbols
 const cacheKey = '__changeless__cache__';
 const clonerKey = '__changeless__cloner__';
 const didChange = '__changeless__did__change__';
 
+// add non-enumerable properties to objects
 const addPropertyTo = (target, methodName, value) => Object.defineProperty(
     target, methodName, {
         enumerable: false,
@@ -32,13 +36,23 @@ export const fns = {
 
     // generates a structured clone function for a given object
     createCloner(obj) {
-        var objDef = '{';
+        let objDef = '{';
 
-        fns.iterateObject(obj, (val, key) =>
+        fns.forEachInObject(obj, (val, key) =>
             objDef += `'${key}': obj['${key}'],`);
 
         objDef += '}';
         return Function('obj', 'return ' + objDef);
+    },
+
+    simpleCloner(obj) {
+        let target = {};
+        for (let i in obj) {
+            if (obj.hasOwnProperty(i)) {
+                target[i] = obj[i];
+            }
+        }
+        return target;
     },
 
     // clones object using the generated cloner.
@@ -54,27 +68,28 @@ export const fns = {
         return clone;
     },
 
+
     cloneArray(arr) {
-        return arr.slice(0);
+      return arr.slice(0);
     },
 
     cloneShallow(value) {
         return isArray(value) ? fns.cloneArray(value) : fns.cloneObject(value);
     },
 
-    iterateArrayRight(arr, cb) {
+    forEachInArrayRight(arr, cb) {
         for (let i = arr.length - 1; i >= 0; i--) {
             cb(arr[i], i, arr);
         }
     },
 
-    iterateArray(arr, cb) {
+    forEachInArray(arr, cb) {
         for (let i = 0, len = arr.length; i < len; i++) {
             cb(arr[i], i, arr);
         }
     },
 
-    iterateObject(obj, cb) {
+    forEachInObject(obj, cb) {
         const keys = Object.keys(obj);
         for (let i = 0, len = keys.length; i < len; i++) {
             const key = keys[i];
@@ -83,7 +98,7 @@ export const fns = {
     },
 
     iterate(value) {
-        return isArrayLike(value) ? fns.iterateArray(value) : fns.iterateObject(value);
+        return isArrayLike(value) ? fns.forEachInArray(value) : fns.forEachInObject(value);
     },
 
     // define a cache for changes. changes won't happen until applyMutation is called
@@ -100,19 +115,23 @@ export const fns = {
         const cache = object[cacheKey];
         const changesToApply = changes || fns.getMergerChanges(cache);
         const cloned = fns.cloneShallow(object);
-
         fns.traverse(cloned, (val, key, path, obj, isObj) => {
             if (changesToApply.hasOwnProperty(path)) {
-                if (isObj) {
-                    obj[key] = fns.cloneShallow(obj[key]);
-                } else {
-                    obj[key] = changesToApply[path];
-                }
+
+                // pass over objects in the path, cloning all of their properties.
+                // if it's the value we want to set, set it.
+                obj[key] = isObj
+                    ? fns.cloneShallow(obj[key])
+                    : changesToApply[path];
+
                 changesToApply[path] = didChange;
+            } else {
+                // short-cut, stop traversing path if it isn't in the changes.
+                return false;
             }
         });
-
-        fns.iterateObject(changesToApply, (val, path) => {
+        // other changes to new paths on the object.
+        fns.forEachInObject(changesToApply, (val, path) => {
             if (val !== didChange) {
                 fns.walkPathInObject(cloned, path, fns.getPathUpdater(val, true));
             }
@@ -122,6 +141,11 @@ export const fns = {
         return cloned;
     },
 
+    /**
+     * @name getMergerChanges
+     * @returns {object} an object with all the changes needed for the merge,
+     * as [path, value] pairs.
+     */
     getMergerChanges() {
         const changes = {};
 
@@ -132,16 +156,18 @@ export const fns = {
         );
 
         // collect changes
-        if (arguments.length === 1) {
-            doTraverse(arguments[0]);
-        } else {
-            fns.iterateArrayRight(arguments, doTraverse);
-        }
+        fns.forEachInArrayRight(arguments, doTraverse);
 
         return changes;
     },
 
-
+    /**
+     * @name mutateMerge
+     * merges sources into target, mutates the merge target.
+     * @param {object|array} target merge target.
+     * @params {object|array} sources merge sources.
+     * @returns {object|array} merged target
+     */
     mutateMerge() {
         const args = sliceArguments(arguments, 1);
         const changes = fns.getMergerChanges.apply(null, args);
@@ -149,41 +175,56 @@ export const fns = {
         const target = arguments[0];
 
         // apply changes
-        fns.iterateObject(changes, (val, path) =>
+        fns.forEachInObject(changes, (val, path) =>
             fns.walkPathInObject(target, path, fns.getPathUpdater(val, true)));
 
         return target;
     },
 
-    // traverse an object. accepts a callback which will be called for each node,
-    // with the value and current path to the node from the root object, as well
-    // as a third value to be true if the node is an object.
-
+    /**
+     * @name traverse
+     * traverse an object with a callback.
+     * @param {object|array} obj object to traverse.
+     * @param {function} cb callback for each node. will be called for each node,
+     * with the value and current path to the node from the root object, as well
+     * as a third value to be true if the node is an object.
+     * @returns {undefined} N/A
+     */
     traverse(obj, cb, context = '') {
-        fns.iterateObject(obj, (val, key) => {
+        fns.forEachInObject(obj, (val, key) => {
 
             const path = context ? context + '.' + key : key;
             const isObj = isObject(val);
 
-            cb(val, key, path, obj, isObj);
-            if (isObj) {
+            const shouldContinue = cb(val, key, path, obj, isObj);
+            if (isObj && shouldContinue !== false) {
                 // obj[key] instead of val to take changes as we traverse into account
                 fns.traverse(obj[key], cb, path);
             }
         });
     },
 
+    /**
+     * @name walkPathInObject
+     * updates an object path (or a cache).
+     * @param {object} obj
+     * @param {string|array} path
+     * @param {function} cb
+     * @param {object} cache optionally use a cache to store the changes
+     *                       instead of the object.
+     * @returns {undefined} N/A
+     */
     walkPathInObject(obj, path, cb, cache) {
         const withCache = isObject(cache);
 
         const arrayPath = pathToArray(path);
+
         let curObj = obj;
         let curCache = cache;
-
-        fns.iterateArray(arrayPath, (p, i, arr) => {
+        fns.forEachInArray(arrayPath, (p, i, arr) => {
             const context = curCache || curObj;
             if (i === arr.length - 1) {
-                cb(context, p, context[i]);
+                cb(context, p, context[p]);
             } else {
                 cb(context, p);
                 curObj = curObj[p];
@@ -203,34 +244,57 @@ export const fns = {
     },
 
     getPathUpdater(fn, dontClone) {
+        const toClone = [];
         return function(context, key, currentValue) {
-            global.now -= performance.now();
-            global.calls++;
             switch (arguments.length) {
                 // inner object
                 case 2:
                     let c = context[key];
                     if (isUndefined(c) || !isObject(c)) {
-                        c = context[key] = {};
+                        context[key] = {};
                     } else if (!dontClone) {
-                        context[key] = fns.cloneShallow(c);
+                        toClone.push([context, key]);
                     }
                     break;
                 // value to set
                 case 3:
+                // console.log(toClone)
                     const value = maybeExecute(fn, currentValue);
-                    context[key] = value;
+                    // only set if necessary, ignore NaN
+                    if (context[key] !== value && value === value) {
+
+                        // if we passed over objects, clone them
+                            const last = toClone.length - 1;
+
+                            fns.forEachInArray(toClone, ([_context, _key], i) => {
+                                _context[_key] = fns.cloneShallow(_context[_key]);
+
+                                // update the property on the *cloned* context
+                                if (i === last) {
+                                    context = _context[_key];
+                                }
+                            });
+
+                            // set the value.
+                            // this should be done here and only here, in the whole module.
+                            if (context[clonerKey] && !(key in context)) {
+                                if (__DEV__) {
+                                    const stringified = JSON.stringify(context);
+                                    const formatted = stringified.length > 20 ? stringified.slice(0, 20) + '... }' : stringified;
+                                    console.warn(`Setting a new  property <${key}> on ${formatted}. This causes de-optimisation in object cloning`);
+                                }
+
+                                addPropertyTo(context, clonerKey, fns.simpleCloner);
+                            }
+
+                            context[key] = value;
+                    }
                     break;
             }
-            global.now += performance.now();
 
         };
     }
 };
-            global.calls = 0;
-            global.now = 0;
-
-
 
 export const update = (obj, path, fn) => {
     if (isChangeless(obj)) {
@@ -238,7 +302,6 @@ export const update = (obj, path, fn) => {
     }
 
     const cache = obj[cacheKey];
-
     const cloned = cache ? obj : fns.cloneShallow(obj);
     const updater = fns.getPathUpdater(fn, Boolean(cache));
 
@@ -248,6 +311,7 @@ export const update = (obj, path, fn) => {
         updater,
         cache
     );
+
 
     return cloned;
 };
@@ -291,36 +355,42 @@ export const merge = function() {
 
 export const set = update;
 
-export const map = (obj, fn) => {
-
-    if (isChangeless(obj)) {
-        return obj.map(fn);
-    }
-
-    fns.iterate(obj, (val, key, object) => {
-        set(val, key, fn(val, key, object));
-    });
-};
-
-const publicAPI = {merge, update, set, map, withMutations};
+const publicAPI = {merge, update, set, withMutations};
 
 const isChangeless = obj => obj instanceof Changeless;
 
-const Changeless = function Changeless(context, actions) {
+/**
+ * Creates a new changeless instance. can be called as a regular function.
+ * Similar to lodash wrappers, batches operations and performs them lazily,
+ * when Changeless#value is called.
+ * All API methods can be called as methods of this class' instances, without
+ * the object as the first argument.
+ * e.g. set(someObject, 'a.b', 42) becomes wrappedObject.set('a.b', 42).
+ * @class
+ * @param {object|array} wrapped object or array to wrap for batched mutations.
+ * @param {array} actions existing actions (used internally).
+*/
+const Changeless = function Changeless(wrapped, actions) {
 
-    if (isChangeless(context)) {
-        return context;
+    if (isChangeless(wrapped)) {
+        return wrapped;
     }
 
     // "call constructor"
     if (!isChangeless(this)) {
-        return new Changeless(context, actions);
+        return new Changeless(wrapped, actions);
     }
 
-    this.__wrapped__ = context;
+    this.__wrapped__ = wrapped;
     this.__actions__ = actions || [];
 };
 
+/**
+ * performs the actions on the wrapped object, and returns the object/array.
+ * @method
+ * @name value
+ * @returns {object|array}
+*/
 Changeless.prototype.value = function() {
 
     let wrapped = this.__wrapped__;
@@ -334,12 +404,18 @@ Changeless.prototype.value = function() {
 
 };
 
-Changeless.prototype.plant = function(context) {
-    this.__wrapped__ = context;
+/**
+ * Plants another wrapped object/array in the wrapper.
+ * @method
+ * @name plant
+ * @param {object|array} wrapped
+*/
+Changeless.prototype.plant = function(wrapped) {
+    this.__wrapped__ = wrapped;
     return this;
 };
 
-fns.iterateObject(publicAPI, (val, key) => {
+fns.forEachInObject(publicAPI, (val, key) => {
     Changeless[key] = val;
     Changeless.prototype[key] = function() {
         this.__actions__.push(obj => {

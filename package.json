@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "invariant": "^2.2.0",
     "lodash": "^3.10.1"
   },
   "devDependencies": {

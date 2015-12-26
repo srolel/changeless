@@ -1,7 +1,14 @@
 import imm from 'immutable';
 import simm from 'seamless-immutable';
 import {set, fns} from './index';
-import _ from 'lodash';
+import now from 'performance-now';
+
+if (typeof performance === 'undefined') {
+    var performance = {
+        now: require('performance-now')
+    };
+}
+// import _ from 'lodash';
 if (!global.regeneratorRuntime)
 require('babel-polyfill');
     // _.forEach(fns, (val, key) => {
@@ -20,10 +27,10 @@ require('babel-polyfill');
 const delay = ms => new Promise((resolve) => setTimeout(resolve, ms))
 
 let x = 0;
-const time = async function(fn, desc = `test ${x++}`, numTests = 100) {
+const time = async function(fn, desc = `test ${x++}`, numTests = 20) {
     let t = 0;
     for (let i = 0; i < numTests; i++) {
-;        await delay(i * 0.5);
+;        await delay(i * 0.1);
         const now = performance.now()
         fn()
 ;        t += (performance.now() - now) / numTests;
@@ -45,7 +52,6 @@ const time = async function(fn, desc = `test ${x++}`, numTests = 100) {
 // let result1 = time(() => imock.setIn(['wat40', 'a'], 1000), 'object:immutablejs');
 // let result2 = time(() => set(mock, ['wat40', 'a'], 1000), 'object:native');
 // console.log('object:immutable/native:', (100 * result1 / result2).toFixed(3) + '%');
-
 let mock = [];
 let obj = {};
 for (let i = 0; i < 1000; i++) {
@@ -54,21 +60,30 @@ for (let i = 0; i < 1000; i++) {
 for (let i = 0; i < 1000; i++) {
     mock[i] = obj;
 }
+// console.time('immutablejs fromJS')
 let imock = imm.fromJS(mock);
-
+// console.timeEnd('immutablejs fromJS')
 async function bench() {
-let result1 = await time(() => imock.setIn(['y20', 'x10'], 100), 'array:immutablejs');
-let result2 = await time(() => set(mock, ['y20', 'x10'], 100), 'array:native');
+let result1 = await time(() => imock.setIn([20, 'x10'], 100), 'array:immutablejs');
+let result2 = await time(() => (set(mock, [20, 'x10'], 100)), 'array:native');
 
 // let result3 = time(() => simock.merge({y20: {x10: 100}}, {deep: true}), 'array:seamless-immutable');
 console.log('array:immutable/native:', (100 * result1 / result2).toFixed(3) + '%');
 }
 
-bench();
-// console.log('array:seamless/native:', (100 * result3 / result2).toFixed(3) + '%');
+async function run() {
+    try {
+        await bench();
+    } catch(e) {
+        console.error(e.stack);
+    }
 
     // _.forEach(fns, (val, key) => {
     //     const avgTime = fns[key].meta.time / fns[key].meta.calls;
     //     if (avgTime) console.log(key, avgTime)
     //     fns[key].restore();
     // });
+}
+// console.log('array:seamless/native:', (100 * result3 / result2).toFixed(3) + '%');
+
+run();

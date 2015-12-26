@@ -46,16 +46,23 @@ describe('set', () => {
 
     it('should work with nested object/array', () => {
         const arr = [{a: 2}, {b: 3}];
-        const newArr = set(arr, '0.a', 2);
+        const newArr = set(arr, '0.a', 3);
         expect(arr).to.eql([{a: 2}, {b: 3}]);
         expect(newArr).to.not.equal(arr);
-        expect(newArr).to.eql(arr);
+        expect(newArr).to.not.eql(arr);
         expect(newArr[0]).to.not.equal(arr[0]);
         expect(newArr[1]).to.equal(arr[1]);
         expect(newArr[1].b).to.equal(arr[1].b);
-        expect(newArr[0].a).to.equal(2);
+        expect(newArr[0].a).to.equal(3);
         expect(fns.cloneArray).to.have.been.calledOnce;
         expect(fns.cloneObject).to.have.been.calledOnce;
+    });
+
+    it('should not perform unnecessary mutations', () => {
+        const arr = [{a: 2}, {b: 3}];
+        const newArr = set(arr, '0.a', 2);
+        // expect(newArr).to.equal(arr);
+        expect(newArr[0]).to.equal(arr[0]);
     });
 
 });
