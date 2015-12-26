@@ -79,13 +79,19 @@ export const fns = {
 
     forEachInArrayRight(arr, cb) {
         for (let i = arr.length - 1; i >= 0; i--) {
-            cb(arr[i], i, arr);
+            const result = cb(arr[i], i, arr);
+            if (result === false) {
+                return;
+            }
         }
     },
 
     forEachInArray(arr, cb) {
         for (let i = 0, len = arr.length; i < len; i++) {
-            cb(arr[i], i, arr);
+            const result = cb(arr[i], i, arr);
+             if (result === false) {
+                return;
+            }
         }
     },
 
@@ -93,7 +99,10 @@ export const fns = {
         const keys = Object.keys(obj);
         for (let i = 0, len = keys.length; i < len; i++) {
             const key = keys[i];
-            cb(obj[key], key, obj);
+            const result = cb(obj[key], key, obj);
+            if (result === false) {
+                return;
+            }
         }
     },
 
@@ -147,16 +156,39 @@ export const fns = {
      * as [path, value] pairs.
      */
     getMergerChanges() {
+
+        const contextPath = arguments[0];
+        const hasPath = isString(contextPath);
+        const arrayPath = pathToArray(contextPath);
+
         const changes = {};
+        let args = arguments;
+
+        if (hasPath) {
+            args = sliceArguments(args, 1);
+            arrayPath.reduce((path, cur) => {
+                path = path ? `${path}.${cur}` : cur;
+                changes[path] = {};
+                return path;
+            }, '');
+        }
 
         const doTraverse = obj => fns.traverse(
             obj,
-            (value, key, path) =>
-                !changes.hasOwnProperty(path) && (changes[path] = value)
+            (value, key, path) => {
+
+                if (hasPath) {
+                    path = `${contextPath}.${path}`;
+                }
+
+                if (!changes.hasOwnProperty(path)) {
+                    changes[path] = value;
+                }
+            }
         );
 
         // collect changes
-        fns.forEachInArrayRight(arguments, doTraverse);
+        fns.forEachInArrayRight(args, doTraverse);
 
         return changes;
     },
@@ -293,6 +325,18 @@ export const fns = {
             }
 
         };
+    },
+
+    get(obj, path) {
+        const arrayPath = pathToArray(path);
+        fns.forEachInArray(arrayPath, p => {
+            if (!isObject(obj)) {
+                obj = undefined;
+                return false;
+            }
+            obj = obj[p];
+        });
+        return obj;
     }
 };
 
@@ -341,15 +385,29 @@ export const merge = function() {
         return obj.merge.apply(obj, args);
     }
 
-    const cache = obj[cacheKey];
+    let cache = obj[cacheKey];
 
     const args = sliceArguments(arguments, 1);
+
+    const path = args[0];
+    const hasPath = isString(path);
+
+    if (hasPath) {
+        args.unshift();
+    }
+
     if (cache) {
+
+        if (hasPath) {
+            fns.walkPathInObject(cache, path, fns.getPathUpdater({}, true));
+            cache = fns.get(cache, path);
+        }
+
         args.unshift(cache);
         fns.mutateMerge.apply(null, args);
     } else {
         const changes = fns.getMergerChanges.apply(null, args);
-        return fns.applyMutations(obj, changes);
+        return fns.applyMutations(obj, changes, !hasPath);
     }
 };
 
@@ -396,10 +454,16 @@ Changeless.prototype.value = function() {
     let wrapped = this.__wrapped__;
     const actions = this.__actions__;
 
+    // since the instance's __actions__ is mutated as we go through the actions,
+    // save a copy and restore it when done, so we can call `value` again.
+    const savedActions = actions.slice(0);
     fns.stageMutations(wrapped);
     while (actions.length) {
         actions.shift()(wrapped);
     }
+
+    this.__actions__ = savedActions;
+
     return fns.applyMutations(wrapped);
 
 };

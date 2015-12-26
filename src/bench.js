@@ -27,7 +27,7 @@ require('babel-polyfill');
 const delay = ms => new Promise((resolve) => setTimeout(resolve, ms))
 
 let x = 0;
-const time = async function(fn, desc = `test ${x++}`, numTests = 20) {
+const time = async function(fn, desc = `test ${x++}`, numTests = 100) {
     let t = 0;
     for (let i = 0; i < numTests; i++) {
 ;        await delay(i * 0.1);
@@ -54,7 +54,7 @@ const time = async function(fn, desc = `test ${x++}`, numTests = 20) {
 // console.log('object:immutable/native:', (100 * result1 / result2).toFixed(3) + '%');
 let mock = [];
 let obj = {};
-for (let i = 0; i < 1000; i++) {
+for (let i = 0; i < 11; i++) {
     obj['x' + i] = i;
 }
 for (let i = 0; i < 1000; i++) {
