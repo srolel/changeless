@@ -4,9 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "mocha test --compilers js:babel-register",
+    "test": "mocha tests --compilers js:babel-register",
+    "bench": "node benchmarks/index",
     "test:watch": "mocha test --compilers js:babel-register -w",
-    "test:debug": "iron-node node_modules/mocha/bin test --compilers js:babel-register -w"
+    "test:debug": "iron-node test",
+    "bench:debug": "iron-node benchmarks/index"
   },
   "author": "",
   "license": "ISC",

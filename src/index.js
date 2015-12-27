@@ -20,6 +20,8 @@ const cacheKey = '__changeless__cache__';
 const clonerKey = '__changeless__cloner__';
 const didChange = '__changeless__did__change__';
 
+const dummy = {};
+
 // add non-enumerable properties to objects
 const addPropertyTo = (target, methodName, value) => Object.defineProperty(
     target, methodName, {
@@ -96,12 +98,12 @@ export const fns = {
     },
 
     forEachInObject(obj, cb) {
-        const keys = Object.keys(obj);
-        for (let i = 0, len = keys.length; i < len; i++) {
-            const key = keys[i];
-            const result = cb(obj[key], key, obj);
-            if (result === false) {
-                return;
+        for (let key in obj) {
+            if (obj.hasOwnProperty(key)) {
+                const result = cb(obj[key], key, obj);
+                if (result === false) {
+                    return;
+                }
             }
         }
     },
@@ -120,7 +122,6 @@ export const fns = {
 
     // apply stages mutations
     applyMutations(object, changes) {
-
         const cache = object[cacheKey];
         const changesToApply = changes || fns.getMergerChanges(cache);
         const cloned = fns.cloneShallow(object);
@@ -168,7 +169,7 @@ export const fns = {
             args = sliceArguments(args, 1);
             arrayPath.reduce((path, cur) => {
                 path = path ? `${path}.${cur}` : cur;
-                changes[path] = {};
+                changes[path] = dummy;
                 return path;
             }, '');
         }
@@ -378,7 +379,6 @@ export const withMutations = function(obj, fn) {
 };
 
 export const merge = function() {
-
     const obj = arguments[0];
 
     if (isChangeless(obj)) {
