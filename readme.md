@@ -26,7 +26,7 @@ This also means that there are no changes to existing JS data objects or arrays,
 
 <module> was built with performance in mind. For small to mid-sized data, <module> performs even better than immutable.js, without sacrificing flexibility with a layer of pervasive API. If data is organized mainly in arrays and not plain objects, performance goes up further by a hefty margin. 
 
-Memory performance depends on garbage collection, but noticable slowdowns during benchmarking haven't been observed. In addition, there is absolutely no "set-up" cost, in time nor memory, since nothing but plain objects and arrays are used (including using the wrapper utility, which does nothing but store a reference to the object and doesn't do anything to it).
+Memory performance depends on garbage collection, but noticable slowdowns during benchmarking haven't been observed. In addition, there is absolutely no "set-up" cost, in time nor memory, since nothing but plain objects and arrays are used (including using the wrapper utility, which does nothing but store a reference to the object).
 
 ## API Reference
 
