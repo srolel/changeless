@@ -46,7 +46,7 @@ Takes a target object, and sources objects, and merges them into the target, ret
 
 Takes an object and a function which is called with a wrapped object as the only argument. Any methods called will have the same wrapped features applied and the resulting new object will be returned. This is equivalent to wrapping the object and calling #value on a chain of actions.
 
-## Wrapper
+### Wrapper
 
 Wraps a given object and allows any API methods to be used on the returned wrapped object as instance methods. This allows for:
 
@@ -62,10 +62,12 @@ Wraps a given object and allows any API methods to be used on the returned wrapp
 
 	All methods are run in caching mode instead of being applied to the wrapped object immediately. When `#value` is called, the latest changes are applied and cloning happens the minimal number of times necessary.
 
-### value
+#### Wrapper-specific API
+
+##### value
 
 Performs the actions and returns a new object reference with the prescribed mutations.
 
-### plant
+##### plant
 
 Replaces the wrapped object with another object for reusability.
