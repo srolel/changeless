@@ -62,10 +62,10 @@ Wraps a given object and allows any API methods to be used on the returned wrapp
 
 	All methods are run in caching mode instead of being applied to the wrapped object immediately. When `#value` is called, the latest changes are applied and cloning happens the minimal number of times necessary.
 
-	#### value
+#### value
 
-	Performs the actions and returns a new object reference with the prescribed mutations.
+Performs the actions and returns a new object reference with the prescribed mutations.
 
-	#### plant
+#### plant
 
-	Replaces the wrapped object with another object for reusability.
+Replaces the wrapped object with another object for reusability.
