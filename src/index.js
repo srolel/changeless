@@ -72,7 +72,9 @@ export const fns = {
 
 
     cloneArray(arr) {
-      return arr.slice(0);
+      var res = Array(arr.length);
+      for(var i = 0; i < arr.length; i++) res[i] = arr[i];
+      return res;
     },
 
     cloneShallow(value) {
