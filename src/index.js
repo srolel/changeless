@@ -7,8 +7,11 @@ const {isArray} = Array;
 const isArrayLike = value => length in value;
 const isObject = value => typeof value === 'object';
 
-const sliceArguments = (args, start, end) =>
-    Array.prototype.slice.apply(args, [start, end]);
+const sliceArguments = (args, start, end) => {
+    var ret = Array(end - start);
+    for(var i = start, i < end; i++) ret[i] = args[i];
+    return ret;
+}
 
 const maybeExecute = (maybeFn, arg) =>
     isFunction(maybeFn) ? maybeFn(arg) : maybeFn;
