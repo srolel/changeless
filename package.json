@@ -2,10 +2,11 @@
   "name": "changeless",
   "version": "0.0.1",
   "description": "",
-  "main": "index.js",
+  "main": "build/index.js",
   "scripts": {
     "test": "mocha tests --compilers js:babel-register",
     "bench": "node benchmarks/index",
+    "build": "babel src --out-dir build",
     "test:watch": "mocha test --compilers js:babel-register -w",
     "test:debug": "iron-node test",
     "bench:debug": "iron-node benchmarks/index"
