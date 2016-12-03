@@ -16,7 +16,9 @@ const sliceArguments = (args, start, end = args.length) => {
 const maybeExecute = (maybeFn, arg) =>
     isFunction(maybeFn) ? maybeFn(arg) : maybeFn;
 
-const pathToArray = path => isString(path) ? path.split('.') : path;
+const pathSplitter = '___';
+
+const pathToArray = (path, splitter = pathSplitter) => isString(path) ? path.split(splitter) : path;
 
 // Symbols
 const cacheKey = '__changeless__cache__';
@@ -172,7 +174,7 @@ export const fns = {
         if (hasPath) {
             args = sliceArguments(args, 1);
             arrayPath.reduce((path, cur) => {
-                path = path ? `${path}.${cur}` : cur;
+                path = path ? `${path}${pathSplitter}${cur}` : cur;
                 changes[path] = dummy;
                 return path;
             }, '');
@@ -183,7 +185,7 @@ export const fns = {
             (value, key, path) => {
 
                 if (hasPath) {
-                    path = `${contextPath}.${path}`;
+                    path = `${contextPath}${pathSplitter}${path}`;
                 }
 
                 if (!changes.hasOwnProperty(path)) {
@@ -230,7 +232,7 @@ export const fns = {
     traverse(obj, cb, context = '') {
         fns.forEachInObject(obj, (val, key) => {
 
-            const path = context ? context + '.' + key : key;
+            const path = context ? context + pathSplitter + key : key;
             const isObj = isObject(val);
 
             const shouldContinue = cb(val, key, path, obj, isObj);

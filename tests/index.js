@@ -42,7 +42,7 @@ describe('set', () => {
 
     it('should work with array path', () => {
         const obj = { a: { b: 1 } };
-        const newObj = set(obj, 'a.b', 2);
+        const newObj = set(obj, 'a___b', 2);
         expect(obj).to.eql({ a: { b: 1 } });
         expect(newObj).to.not.equal(obj);
         expect(newObj.a).to.not.equal(obj.a);
@@ -52,7 +52,7 @@ describe('set', () => {
 
     it('should work with nested object/array', () => {
         const arr = [{ a: 2 }, { b: 3 }];
-        const newArr = set(arr, '0.a', 3);
+        const newArr = set(arr, '0___a', 3);
         expect(arr).to.eql([{ a: 2 }, { b: 3 }]);
         expect(newArr).to.not.equal(arr);
         expect(newArr).to.not.eql(arr);
@@ -66,7 +66,7 @@ describe('set', () => {
 
     it('should not perform unnecessary mutations', () => {
         const arr = [{ a: 2 }, { b: 3 }];
-        const newArr = set(arr, '0.a', 2);
+        const newArr = set(arr, '0___a', 2);
         // expect(newArr).to.equal(arr);
         expect(newArr[0]).to.equal(arr[0]);
     });
@@ -156,7 +156,7 @@ describe('merge', () => {
         const target = { a: { x: { y: 0 }, b: { c: { d: 2 } } } };
 
         const source = { c: { d: 3 } };
-        const merged = merge(target, 'a.b', source);
+        const merged = merge(target, 'a___b', source);
 
         expect(target).to.eql({ a: { x: { y: 0 }, b: { c: { d: 2 } } } });
         expect(merged).to.eql({ a: { x: { y: 0 }, b: { c: { d: 3 } } } });
@@ -183,7 +183,7 @@ describe('withMutations', () => {
     it('should apply multiple deep mutations', () => {
         const obj = [{ a: 1, b: [1, 2], c: 3 }, { a: 4, d: 5 }];
         const newObj = imm(obj).withMutations(o => {
-            o.set('0.a', 2).set('1.d', 0);
+            o.set('0___a', 2).set('1___d', 0);
         }).value();
 
         expect(obj).to.eql([{ a: 1, b: [1, 2], c: 3 }, { a: 4, d: 5 }]);
