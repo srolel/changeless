@@ -1,6 +1,6 @@
 {
   "name": "changeless",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "",
   "main": "build/index.js",
   "scripts": {
@@ -13,8 +13,7 @@
   },
   "author": "",
   "license": "ISC",
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
     "invariant": "^2.2.0",
     "babel-core": "^6.3.15",
