@@ -1,4 +1,4 @@
-let __DEV__ = process.env.NODE_ENV !== 'production';
+let __DEV__ = process.env.NODE_ENV === 'development' || (typeof window !== 'undefined') && localStorage.getItem('debug') === 'changeless';
 
 const isFunction = value => typeof value === 'function';
 const isUndefined = value => value === undefined;
