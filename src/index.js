@@ -9,7 +9,7 @@ const isObject = value => typeof value === 'object';
 
 const sliceArguments = (args, start, end = args.length) => {
     var ret = Array(end - start);
-    for (var i = start, j = 0; i < end; i++, j++) ret[j] = args[i];
+    for (var i = start, j = 0; i < end; i++ , j++) ret[j] = args[i];
     return ret;
 }
 
@@ -75,9 +75,9 @@ export const fns = {
 
 
     cloneArray(arr) {
-      var res = Array(arr.length);
-      for(var i = 0; i < arr.length; i++) res[i] = arr[i];
-      return res;
+        var res = Array(arr.length);
+        for (var i = 0; i < arr.length; i++) res[i] = arr[i];
+        return res;
     },
 
     cloneShallow(value) {
@@ -96,7 +96,7 @@ export const fns = {
     forEachInArray(arr, cb) {
         for (let i = 0, len = arr.length; i < len; i++) {
             const result = cb(arr[i], i, arr);
-             if (result === false) {
+            if (result === false) {
                 return;
             }
         }
@@ -283,7 +283,7 @@ export const fns = {
 
     getPathUpdater(fn, dontClone) {
         const toClone = [];
-        return function(context, key, currentValue) {
+        return function (context, key, currentValue) {
             switch (arguments.length) {
                 // inner object
                 case 2:
@@ -296,36 +296,40 @@ export const fns = {
                     break;
                 // value to set
                 case 3:
-                // console.log(toClone)
+                    // console.log(toClone)
                     const value = maybeExecute(fn, currentValue);
                     // only set if necessary, ignore NaN
                     if (context[key] !== value && value === value) {
 
                         // if we passed over objects, clone them
-                            const last = toClone.length - 1;
+                        const last = toClone.length - 1;
 
-                            fns.forEachInArray(toClone, ([_context, _key], i) => {
-                                _context[_key] = fns.cloneShallow(_context[_key]);
+                        fns.forEachInArray(toClone, ([_context, _key], i) => {
+                            _context[_key] = fns.cloneShallow(_context[_key]);
 
-                                // update the property on the *cloned* context
-                                if (i === last) {
-                                    context = _context[_key];
-                                }
-                            });
+                            // update the property on the *cloned* context
+                            if (i === last) {
+                                context = _context[_key];
+                            }
+                        });
 
-                            // set the value.
-                            // this should be done here and only here, in the whole module.
-                            if (context[clonerKey] && !(key in context)) {
-                                if (__DEV__) {
+                        // set the value.
+                        // this should be done here and only here, in the whole module.
+                        if (context[clonerKey] && !(key in context)) {
+                            if (__DEV__) {
+                                let formatted = '<object>';
+                                try {
                                     const stringified = JSON.stringify(context);
-                                    const formatted = stringified.length > 20 ? stringified.slice(0, 20) + '... }' : stringified;
-                                    console.warn(`Setting a new  property <${key}> on ${formatted}. This causes de-optimisation in object cloning`);
+                                    formatted = stringified.length > 20 ? stringified.slice(0, 20) + '... }' : stringified;
+                                } catch (e) {
                                 }
-
-                                addPropertyTo(context, clonerKey, fns.simpleCloner);
+                                console.warn(`Setting a new  property <${key}> on ${formatted}. This causes de-optimisation in object cloning`);
                             }
 
-                            context[key] = value;
+                            addPropertyTo(context, clonerKey, fns.simpleCloner);
+                        }
+
+                        context[key] = value;
                     }
                     break;
             }
@@ -366,7 +370,7 @@ export const update = (obj, path, fn) => {
     return cloned;
 };
 
-export const withMutations = function(obj, fn) {
+export const withMutations = function (obj, fn) {
 
     if (isChangeless(obj)) {
         return obj.withMutations(fn);
@@ -383,7 +387,7 @@ export const withMutations = function(obj, fn) {
         : changeless.value();
 };
 
-export const merge = function() {
+export const merge = function () {
     const obj = arguments[0];
 
     if (isChangeless(obj)) {
@@ -418,7 +422,7 @@ export const merge = function() {
 
 export const set = update;
 
-const publicAPI = {merge, update, set, withMutations};
+const publicAPI = { merge, update, set, withMutations };
 
 const isChangeless = obj => obj instanceof Changeless;
 
@@ -454,7 +458,7 @@ const Changeless = function Changeless(wrapped, actions) {
  * @name value
  * @returns {object|array}
 */
-Changeless.prototype.value = function() {
+Changeless.prototype.value = function () {
 
     let wrapped = this.__wrapped__;
     const actions = this.__actions__;
@@ -479,14 +483,14 @@ Changeless.prototype.value = function() {
  * @name plant
  * @param {object|array} wrapped
 */
-Changeless.prototype.plant = function(wrapped) {
+Changeless.prototype.plant = function (wrapped) {
     this.__wrapped__ = wrapped;
     return this;
 };
 
 fns.forEachInObject(publicAPI, (val, key) => {
     Changeless[key] = val;
-    Changeless.prototype[key] = function() {
+    Changeless.prototype[key] = function () {
         this.__actions__.push(obj => {
             const args = [obj, ...arguments];
             return val.apply(this, args);
