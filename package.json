@@ -1,6 +1,6 @@
 {
-  "name": "native-immutable",
-  "version": "1.0.0",
+  "name": "changeless",
+  "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -23,6 +23,7 @@
     "chai": "^3.4.1",
     "lodash": "^3.10.1",
     "mocha": "^2.3.4",
+    "performance-now": "^0.2.0",
     "reacquire": "^0.1.4",
     "seamless-immutable": "^4.0.2",
     "sinon": "^1.17.2",

@@ -7,9 +7,9 @@ const {isArray} = Array;
 const isArrayLike = value => length in value;
 const isObject = value => typeof value === 'object';
 
-const sliceArguments = (args, start, end) => {
+const sliceArguments = (args, start, end = args.length) => {
     var ret = Array(end - start);
-    for(var i = start, i < end; i++) ret[i] = args[i];
+    for (var i = start, j = 0; i < end; i++, j++) ret[j] = args[i];
     return ret;
 }
 

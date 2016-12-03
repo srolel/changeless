@@ -4,6 +4,8 @@ import sinonChai from 'sinon-chai';
 import imm, {fns} from '../src/index';
 import {time} from './utils';
 import _ from 'lodash';
+import now from 'performance-now';
+
 chai.use(sinonChai);
 const {set, merge, withMutations} = imm;
 
@@ -184,27 +186,13 @@ describe('withMutations', () => {
 
 });
 
-// describe('API', () => {
-//     it('should act as a proxy if opted in', () => {
-//         const obj = [{a: 1, b: [1, 2], c: 3}, {a: 4, d: 5}];
-//         const newObj = imm(obj, {proxy: true}).withMutations(o => {
-//             o.set('0.a', 2).set('1.d', 0);
-//         });
-//         console.log(newObj)
-        // expect(fns.cloneObject).to.have.been.calledTwice;
-        // expect(fns.cloneArray).to.have.been.calledOnce;
-//         expect(newObj[0]).to.not.equal(obj[0]);
-//         expect(newObj[0].b).to.equal(obj[0].b);
-//     })
-// })
-
 // beforeEach(() =>
 //     _.forEach(fns, (val, key) => {
 //         fns[key] = function() {
-//             const now = performance.now();
+//             const nowTime = now();
 //             const ret = val.apply(null, arguments);
 //             fns[key].meta.calls++;
-//             fns[key].meta.time += performance.now() - now;
+//             fns[key].meta.time += now() - nowTime;
 //             return ret;
 //         };
 //         fns[key].meta = {calls: 0, time: 0};
