@@ -8,7 +8,7 @@ var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = [
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
 
-var __DEV__ = process.env.NODE_ENV !== 'production';
+var __DEV__ = process.env.NODE_ENV === 'development' || typeof window !== 'undefined' && localStorage.getItem('debug') === 'changeless';
 
 var isFunction = function isFunction(value) {
     return typeof value === 'function';
@@ -25,7 +25,7 @@ var isArrayLike = function isArrayLike(value) {
     return length in value;
 };
 var isObject = function isObject(value) {
-    return (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object';
+    return (typeof value === 'undefined' ? 'undefined' : _typeof(value)) === 'object' && value !== null;
 };
 
 var sliceArguments = function sliceArguments(args, start) {
@@ -159,7 +159,6 @@ var fns = exports.fns = {
         var cloned = fns.cloneShallow(object);
         fns.traverse(cloned, function (val, key, path, obj, isObj) {
             if (changesToApply.hasOwnProperty(path)) {
-
                 // pass over objects in the path, cloning all of their properties.
                 // if it's the value we want to set, set it.
                 obj[key] = isObj ? fns.cloneShallow(obj[key]) : changesToApply[path];
@@ -354,8 +353,11 @@ var fns = exports.fns = {
                             // this should be done here and only here, in the whole module.
                             if (context[clonerKey] && !(key in context)) {
                                 if (__DEV__) {
-                                    var stringified = JSON.stringify(context);
-                                    var formatted = stringified.length > 20 ? stringified.slice(0, 20) + '... }' : stringified;
+                                    var formatted = '<object>';
+                                    try {
+                                        var stringified = JSON.stringify(context);
+                                        formatted = stringified.length > 20 ? stringified.slice(0, 20) + '... }' : stringified;
+                                    } catch (e) {}
                                     console.warn('Setting a new  property <' + key + '> on ' + formatted + '. This causes de-optimisation in object cloning');
                                 }
 
