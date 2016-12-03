@@ -2,7 +2,6 @@ require('babel-core/register');
 require('reacquire')({register: true});
 var chokidar = require('chokidar');
 
-
 require.uncache = function (moduleName) {
     // Run over the cache looking for the files
     // loaded by the specified module name

@@ -1,8 +1,8 @@
-import {expect, default as chai} from 'chai';
+import { expect, default as chai } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
-import imm, {fns} from '../src/index';
-import {time} from './utils';
+import imm, { fns } from '../src/index';
+import { time } from './utils';
 import _ from 'lodash';
 import now from 'performance-now';
 
@@ -23,11 +23,11 @@ afterEach(() => {
 
 describe('set', () => {
     it('should return a different object reference', () => {
-        const obj = {a: 1};
+        const obj = { a: 1 };
         const newObj = set(obj, 'a', 2);
-        expect(obj).to.eql({a: 1});
+        expect(obj).to.eql({ a: 1 });
         expect(newObj).to.not.equal(obj);
-        expect(newObj).to.eql({a: 2});
+        expect(newObj).to.eql({ a: 2 });
         expect(fns.cloneObject).to.have.been.calledOnce;
     });
 
@@ -41,9 +41,9 @@ describe('set', () => {
     });
 
     it('should work with array path', () => {
-        const obj = {a: {b: 1}};
+        const obj = { a: { b: 1 } };
         const newObj = set(obj, 'a.b', 2);
-        expect(obj).to.eql({a: {b: 1}});
+        expect(obj).to.eql({ a: { b: 1 } });
         expect(newObj).to.not.equal(obj);
         expect(newObj.a).to.not.equal(obj.a);
         expect(newObj.a.b).to.equal(2);
@@ -51,9 +51,9 @@ describe('set', () => {
     });
 
     it('should work with nested object/array', () => {
-        const arr = [{a: 2}, {b: 3}];
+        const arr = [{ a: 2 }, { b: 3 }];
         const newArr = set(arr, '0.a', 3);
-        expect(arr).to.eql([{a: 2}, {b: 3}]);
+        expect(arr).to.eql([{ a: 2 }, { b: 3 }]);
         expect(newArr).to.not.equal(arr);
         expect(newArr).to.not.eql(arr);
         expect(newArr[0]).to.not.equal(arr[0]);
@@ -65,7 +65,7 @@ describe('set', () => {
     });
 
     it('should not perform unnecessary mutations', () => {
-        const arr = [{a: 2}, {b: 3}];
+        const arr = [{ a: 2 }, { b: 3 }];
         const newArr = set(arr, '0.a', 2);
         // expect(newArr).to.equal(arr);
         expect(newArr[0]).to.equal(arr[0]);
@@ -74,18 +74,28 @@ describe('set', () => {
 });
 
 describe('merge', () => {
+
+    it('should work with null values', () => {
+        const obj1 = { a: null, b: null, d: { e: null } };
+        const obj2 = { a: null, c: null, d: { e: 6 } };
+        const ref2 = obj2;
+        const merged = merge(obj1, obj2);
+        expect(merged).to.not.equal(obj1);
+        expect(merged).to.eql({ a: null, b: null, c: null, d: { e: 6 } });
+    });
+
     it('should merge two objects', () => {
-        const obj1 = {a: 1, b: 2, d: {e: 4}};
-        const obj2 = {a: 2, c: 3, d: {e: 6}};
+        const obj1 = { a: 1, b: 2, d: { e: 4 } };
+        const obj2 = { a: 2, c: 3, d: { e: 6 } };
         const ref2 = obj2;
         const merged = merge(obj1, obj2);
         expect(merged).to.not.equal(obj1);
         expect(merged).to.not.equal(obj1);
-        expect(obj1).to.eql({a: 1, b: 2, d: {e: 4}});
+        expect(obj1).to.eql({ a: 1, b: 2, d: { e: 4 } });
         expect(obj2).to.equal(ref2);
         expect(obj2.d).to.equal(ref2.d);
-        expect(obj2).to.eql({a: 2, c: 3, d: {e: 6}});
-        expect(merged).to.eql({a: 2, b: 2, c: 3, d: {e: 6}});
+        expect(obj2).to.eql({ a: 2, c: 3, d: { e: 6 } });
+        expect(merged).to.eql({ a: 2, b: 2, c: 3, d: { e: 6 } });
         expect(fns.cloneObject).to.have.been.calledTwice;
 
         // warning is about settings new property on an object
@@ -93,10 +103,10 @@ describe('merge', () => {
     });
 
     it('should merge two objects shallowly', () => {
-        const obj1 = {a: 1, b: {d: 4}};
-        const obj2 = {a: 2};
+        const obj1 = { a: 1, b: { d: 4 } };
+        const obj2 = { a: 2 };
         const merged = merge(obj1, obj2);
-        expect(merged).to.eql({a: 2, b: {d: 4}});
+        expect(merged).to.eql({ a: 2, b: { d: 4 } });
         expect(merged.b).to.equal(obj1.b);
         expect(fns.cloneObject).to.have.been.calledOnce;
     });
@@ -123,15 +133,15 @@ describe('merge', () => {
     it('should merge mixed objects', () => {
 
         const users = {
-          'data': [{ 'user': 'barney' }, { 'user': 'fred' }]
+            'data': [{ 'user': 'barney' }, { 'user': 'fred' }]
         };
 
         const ages1 = {
-          'data': [{ 'age': 36 }]
+            'data': [{ 'age': 36 }]
         };
 
         const ages2 = {
-          'data': [{ 'age': 30 }, { 'age': 40 }]
+            'data': [{ 'age': 30 }, { 'age': 40 }]
         };
         const merged = imm(users).merge(ages1, ages2).value();
         expect(merged).to.eql({ 'data': [{ 'user': 'barney', 'age': 30 }, { 'user': 'fred', 'age': 40 }] });
@@ -143,13 +153,13 @@ describe('merge', () => {
     });
 
     it('should work with paths (mergeIn)', () => {
-        const target = {a: {x: {y: 0}, b: {c: {d: 2}}}};
+        const target = { a: { x: { y: 0 }, b: { c: { d: 2 } } } };
 
-        const source = {c: {d: 3}};
+        const source = { c: { d: 3 } };
         const merged = merge(target, 'a.b', source);
 
-        expect(target).to.eql({a: {x: {y: 0}, b: {c: {d: 2}}}});
-        expect(merged).to.eql({a: {x: {y: 0}, b: {c: {d: 3}}}});
+        expect(target).to.eql({ a: { x: { y: 0 }, b: { c: { d: 2 } } } });
+        expect(merged).to.eql({ a: { x: { y: 0 }, b: { c: { d: 3 } } } });
         expect(merged.a).to.not.equal(target.a);
         expect(merged.a.b).to.not.equal(target.a.b);
         expect(merged.a.x).to.equal(target.a.x);
@@ -160,24 +170,24 @@ describe('merge', () => {
 describe('withMutations', () => {
 
     it('should apply multiple mutations', () => {
-        const obj = {a: 1, b: 2, c: 3};
+        const obj = { a: 1, b: 2, c: 3 };
         const newObj = withMutations(obj, o => {
             o.set('a', 2).set('b', 1);
         });
 
-        expect(obj).to.eql({a: 1, b: 2, c: 3});
-        expect(newObj).to.eql({a: 2, b: 1, c: 3});
+        expect(obj).to.eql({ a: 1, b: 2, c: 3 });
+        expect(newObj).to.eql({ a: 2, b: 1, c: 3 });
         expect(fns.cloneObject).to.have.been.calledOnce;
     });
 
     it('should apply multiple deep mutations', () => {
-        const obj = [{a: 1, b: [1, 2], c: 3}, {a: 4, d: 5}];
+        const obj = [{ a: 1, b: [1, 2], c: 3 }, { a: 4, d: 5 }];
         const newObj = imm(obj).withMutations(o => {
             o.set('0.a', 2).set('1.d', 0);
         }).value();
 
-        expect(obj).to.eql([{a: 1, b: [1, 2], c: 3}, {a: 4, d: 5}]);
-        expect(newObj).to.eql([{a: 2, b: [1, 2], c: 3}, {a: 4, d: 0}]);
+        expect(obj).to.eql([{ a: 1, b: [1, 2], c: 3 }, { a: 4, d: 5 }]);
+        expect(newObj).to.eql([{ a: 2, b: [1, 2], c: 3 }, { a: 4, d: 0 }]);
         expect(fns.cloneObject).to.have.been.calledTwice;
         expect(fns.cloneArray).to.have.been.calledOnce;
         expect(newObj[0]).to.not.equal(obj[0]);

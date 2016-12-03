@@ -5,7 +5,7 @@ const isUndefined = value => value === undefined;
 const isString = value => typeof value === 'string';
 const {isArray} = Array;
 const isArrayLike = value => length in value;
-const isObject = value => typeof value === 'object';
+const isObject = value => typeof value === 'object' && value !== null; 
 
 const sliceArguments = (args, start, end = args.length) => {
     var ret = Array(end - start);
@@ -132,7 +132,6 @@ export const fns = {
         const cloned = fns.cloneShallow(object);
         fns.traverse(cloned, (val, key, path, obj, isObj) => {
             if (changesToApply.hasOwnProperty(path)) {
-
                 // pass over objects in the path, cloning all of their properties.
                 // if it's the value we want to set, set it.
                 obj[key] = isObj
