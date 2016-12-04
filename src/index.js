@@ -239,13 +239,15 @@ const fns = {
     traverse(obj, cb, context = '') {
         let keys = [],
             objs = [],
-            paths = [];
+            paths = [],
+            len = 0;
             for (let k in obj) {
-                keys.push(k);
-                objs.push(obj);
-                paths.push(context);
+                keys[len] = k;
+                objs[len] = obj;
+                paths[len] = context;
+                len++;
             }
-        for (let i = 0, len = keys.length; i < len; i++) {
+        for (let i = 0; i < len; i++) {
             const key = keys[i];
             const obj = objs[i];
             const val = obj[key];
@@ -258,9 +260,9 @@ const fns = {
             if (isObj && shouldContinue !== false) {
                 const keyObj = obj[key];
                 for (let k in keyObj) {
-                    keys.push(k);
-                    objs.push(keyObj);
-                    paths.push(path);
+                    keys[len] = k;
+                    objs[len] = keyObj;
+                    paths[len] = path;
                     len++;
                 }
             }

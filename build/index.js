@@ -1,9 +1,5 @@
 'use strict';
 
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
@@ -70,7 +66,7 @@ var hasCache = function hasCache(obj) {
 };
 
 // exporting for tests
-var fns = exports.fns = {
+var fns = {
 
     // generates a structured clone function for a given object
 
@@ -118,27 +114,18 @@ var fns = exports.fns = {
     },
     forEachInArrayRight: function forEachInArrayRight(arr, cb) {
         for (var i = arr.length - 1; i >= 0; i--) {
-            var result = cb(arr[i], i, arr);
-            if (result === false) {
-                return;
-            }
+            if (cb(arr[i], i, arr) === false) return;
         }
     },
     forEachInArray: function forEachInArray(arr, cb) {
         for (var i = 0, len = arr.length; i < len; i++) {
-            var result = cb(arr[i], i, arr);
-            if (result === false) {
-                return;
-            }
+            if (cb(arr[i], i, arr) === false) return;
         }
     },
     forEachInObject: function forEachInObject(obj, cb) {
         for (var key in obj) {
             if (obj.hasOwnProperty(key)) {
-                var result = cb(obj[key], key, obj);
-                if (result === false) {
-                    return;
-                }
+                if (cb(obj[key], key, obj) === false) return;
             }
         }
     },
@@ -198,12 +185,14 @@ var fns = exports.fns = {
         var args = arguments;
 
         if (hasPath) {
-            args = sliceArguments(args, 1);
-            arrayPath.reduce(function (path, cur) {
-                path = path ? '' + path + pathSplitter + cur : cur;
-                changes[path] = dummy;
-                return path;
-            }, '');
+            (function () {
+                args = sliceArguments(args, 1);
+                var path = '';
+                fns.forEachInArray(arrayPath, function (val) {
+                    path = path ? '' + path + pathSplitter + val : val;
+                    changes[path] = dummy;
+                });
+            })();
         }
 
         var doTraverse = function doTraverse(obj) {
@@ -248,6 +237,20 @@ var fns = exports.fns = {
     },
 
 
+    // _traverse(obj, cb, context = '') {
+    //     fns.forEachInObject(obj, (val, key) => {
+
+    //         const path = context ? context + pathSplitter + key : key;
+    //         const isObj = isObject(val);
+
+    //         const shouldContinue = cb(val, key, path, obj, isObj);
+    //         if (isObj && shouldContinue !== false) {
+    //             // obj[key] instead of val to take changes as we traverse into account
+    //             fns._traverse(obj[key], cb, path);
+    //         }
+    //     });
+    // },
+
     /**
      * @name traverse
      * traverse an object with a callback.
@@ -257,20 +260,39 @@ var fns = exports.fns = {
      * as a third value to be true if the node is an object.
      * @returns {undefined} N/A
      */
+
+    // TODO improve perf
     traverse: function traverse(obj, cb) {
         var context = arguments.length <= 2 || arguments[2] === undefined ? '' : arguments[2];
 
-        fns.forEachInObject(obj, function (val, key) {
-
-            var path = context ? context + pathSplitter + key : key;
+        var keys = [],
+            objs = [],
+            paths = [];
+        for (var k in obj) {
+            keys.push(k);
+            objs.push(obj);
+            paths.push(context);
+        }
+        for (var i = 0, len = keys.length; i < len; i++) {
+            var key = keys[i];
+            var _obj = objs[i];
+            var val = _obj[key];
+            var _context2 = paths[i];
+            var path = _context2 ? _context2 + pathSplitter + key : key;
             var isObj = isObject(val);
 
-            var shouldContinue = cb(val, key, path, obj, isObj);
+            var shouldContinue = cb(val, key, path, _obj, isObj);
+
             if (isObj && shouldContinue !== false) {
-                // obj[key] instead of val to take changes as we traverse into account
-                fns.traverse(obj[key], cb, path);
+                var keyObj = _obj[key];
+                for (var _k in keyObj) {
+                    keys.push(_k);
+                    objs.push(keyObj);
+                    paths.push(path);
+                    len++;
+                }
             }
-        });
+        }
     },
 
 
@@ -329,7 +351,6 @@ var fns = exports.fns = {
                     break;
                 // value to set
                 case 3:
-                    // console.log(toClone)
                     var value = maybeExecute(fn, currentValue);
                     // only set if necessary, ignore NaN
                     if (context[key] !== value && value === value) {
@@ -387,7 +408,7 @@ var fns = exports.fns = {
     }
 };
 
-var update = exports.update = function update(obj, path, fn) {
+var update = function update(obj, path, fn) {
     if (isChangeless(obj)) {
         return obj.update(path, fn);
     }
@@ -401,7 +422,7 @@ var update = exports.update = function update(obj, path, fn) {
     return cloned;
 };
 
-var withMutations = exports.withMutations = function withMutations(obj, fn) {
+var withMutations = function withMutations(obj, fn) {
 
     if (isChangeless(obj)) {
         return obj.withMutations(fn);
@@ -416,7 +437,7 @@ var withMutations = exports.withMutations = function withMutations(obj, fn) {
     return hasCache(obj) ? mutated : changeless.value();
 };
 
-var merge = exports.merge = function merge() {
+var merge = function merge() {
     var obj = arguments[0];
 
     if (isChangeless(obj)) {
@@ -449,7 +470,7 @@ var merge = exports.merge = function merge() {
     }
 };
 
-var set = exports.set = update;
+var set = update;
 
 var publicAPI = { merge: merge, update: update, set: set, withMutations: withMutations };
 
@@ -496,10 +517,10 @@ Changeless.prototype.value = function () {
 
     // since the instance's __actions__ is mutated as we go through the actions,
     // save a copy and restore it when done, so we can call `value` again.
-    var savedActions = actions.slice(0);
+    var savedActions = fns.cloneArray(actions);
     fns.stageMutations(wrapped);
-    while (actions.length) {
-        actions.shift()(wrapped);
+    for (var i = 0, len = actions.length; i < len; i++, len = actions.length) {
+        actions[i](wrapped);
     }
 
     this.__actions__ = savedActions;
@@ -532,4 +553,9 @@ fns.forEachInObject(publicAPI, function (val, key) {
     };
 });
 
+exports.fns = fns;
 exports.default = Changeless;
+exports.update = update;
+exports.withMutations = withMutations;
+exports.merge = merge;
+exports.set = set;
