@@ -5,7 +5,7 @@ const isUndefined = value => value === undefined;
 const isString = value => typeof value === 'string';
 const {isArray} = Array;
 const isArrayLike = value => length in value;
-const isObject = value => typeof value === 'object' && value !== null; 
+const isObject = value => typeof value === 'object' && value !== null;
 
 const sliceArguments = (args, start, end = args.length) => {
     var ret = Array(end - start);
@@ -39,7 +39,7 @@ const addPropertyTo = (target, methodName, value) => Object.defineProperty(
 const hasCache = obj => Boolean(obj[cacheKey]);
 
 // exporting for tests
-export const fns = {
+const fns = {
 
     // generates a structured clone function for a given object
     createCloner(obj) {
@@ -88,29 +88,20 @@ export const fns = {
 
     forEachInArrayRight(arr, cb) {
         for (let i = arr.length - 1; i >= 0; i--) {
-            const result = cb(arr[i], i, arr);
-            if (result === false) {
-                return;
-            }
+            if (cb(arr[i], i, arr) === false) return;
         }
     },
 
     forEachInArray(arr, cb) {
         for (let i = 0, len = arr.length; i < len; i++) {
-            const result = cb(arr[i], i, arr);
-            if (result === false) {
-                return;
-            }
+            if (cb(arr[i], i, arr) === false) return;
         }
     },
 
     forEachInObject(obj, cb) {
         for (let key in obj) {
             if (obj.hasOwnProperty(key)) {
-                const result = cb(obj[key], key, obj);
-                if (result === false) {
-                    return;
-                }
+                if (cb(obj[key], key, obj) === false) return;
             }
         }
     },
@@ -173,11 +164,11 @@ export const fns = {
 
         if (hasPath) {
             args = sliceArguments(args, 1);
-            arrayPath.reduce((path, cur) => {
-                path = path ? `${path}${pathSplitter}${cur}` : cur;
+            let path = '';
+            fns.forEachInArray(arrayPath, (val) => {
+                path = path ? `${path}${pathSplitter}${val}` : val;
                 changes[path] = dummy;
-                return path;
-            }, '');
+            });
         }
 
         const doTraverse = obj => fns.traverse(
@@ -220,6 +211,20 @@ export const fns = {
         return target;
     },
 
+    // _traverse(obj, cb, context = '') {
+    //     fns.forEachInObject(obj, (val, key) => {
+
+    //         const path = context ? context + pathSplitter + key : key;
+    //         const isObj = isObject(val);
+
+    //         const shouldContinue = cb(val, key, path, obj, isObj);
+    //         if (isObj && shouldContinue !== false) {
+    //             // obj[key] instead of val to take changes as we traverse into account
+    //             fns._traverse(obj[key], cb, path);
+    //         }
+    //     });
+    // },
+
     /**
      * @name traverse
      * traverse an object with a callback.
@@ -229,18 +234,37 @@ export const fns = {
      * as a third value to be true if the node is an object.
      * @returns {undefined} N/A
      */
-    traverse(obj, cb, context = '') {
-        fns.forEachInObject(obj, (val, key) => {
 
+    // TODO improve perf
+    traverse(obj, cb, context = '') {
+        let keys = [],
+            objs = [],
+            paths = [];
+            for (let k in obj) {
+                keys.push(k);
+                objs.push(obj);
+                paths.push(context);
+            }
+        for (let i = 0, len = keys.length; i < len; i++) {
+            const key = keys[i];
+            const obj = objs[i];
+            const val = obj[key];
+            const context = paths[i];
             const path = context ? context + pathSplitter + key : key;
             const isObj = isObject(val);
 
             const shouldContinue = cb(val, key, path, obj, isObj);
+
             if (isObj && shouldContinue !== false) {
-                // obj[key] instead of val to take changes as we traverse into account
-                fns.traverse(obj[key], cb, path);
+                const keyObj = obj[key];
+                for (let k in keyObj) {
+                    keys.push(k);
+                    objs.push(keyObj);
+                    paths.push(path);
+                    len++;
+                }
             }
-        });
+        }
     },
 
     /**
@@ -297,7 +321,6 @@ export const fns = {
                     break;
                 // value to set
                 case 3:
-                    // console.log(toClone)
                     const value = maybeExecute(fn, currentValue);
                     // only set if necessary, ignore NaN
                     if (context[key] !== value && value === value) {
@@ -351,7 +374,7 @@ export const fns = {
     }
 };
 
-export const update = (obj, path, fn) => {
+const update = (obj, path, fn) => {
     if (isChangeless(obj)) {
         return obj.update(path, fn);
     }
@@ -371,7 +394,7 @@ export const update = (obj, path, fn) => {
     return cloned;
 };
 
-export const withMutations = function (obj, fn) {
+const withMutations = function (obj, fn) {
 
     if (isChangeless(obj)) {
         return obj.withMutations(fn);
@@ -388,7 +411,7 @@ export const withMutations = function (obj, fn) {
         : changeless.value();
 };
 
-export const merge = function () {
+const merge = function () {
     const obj = arguments[0];
 
     if (isChangeless(obj)) {
@@ -421,7 +444,7 @@ export const merge = function () {
     }
 };
 
-export const set = update;
+const set = update;
 
 const publicAPI = { merge, update, set, withMutations };
 
@@ -466,10 +489,10 @@ Changeless.prototype.value = function () {
 
     // since the instance's __actions__ is mutated as we go through the actions,
     // save a copy and restore it when done, so we can call `value` again.
-    const savedActions = actions.slice(0);
+    const savedActions = fns.cloneArray(actions);
     fns.stageMutations(wrapped);
-    while (actions.length) {
-        actions.shift()(wrapped);
+    for (let i = 0, len = actions.length; i < len; i++ , len = actions.length) {
+        actions[i](wrapped);
     }
 
     this.__actions__ = savedActions;
@@ -500,4 +523,9 @@ fns.forEachInObject(publicAPI, (val, key) => {
     };
 });
 
-export default Changeless;
+exports.fns = fns;
+exports.default = Changeless;
+exports.update = update;
+exports.withMutations = withMutations;
+exports.merge = merge;
+exports.set = set;

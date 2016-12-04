@@ -41,8 +41,11 @@ var maybeExecute = function maybeExecute(maybeFn, arg) {
     return isFunction(maybeFn) ? maybeFn(arg) : maybeFn;
 };
 
+var pathSplitter = '___';
+
 var pathToArray = function pathToArray(path) {
-    return isString(path) ? path.split('.') : path;
+    var splitter = arguments.length <= 1 || arguments[1] === undefined ? pathSplitter : arguments[1];
+    return isString(path) ? path.split(splitter) : path;
 };
 
 // Symbols
@@ -197,7 +200,7 @@ var fns = exports.fns = {
         if (hasPath) {
             args = sliceArguments(args, 1);
             arrayPath.reduce(function (path, cur) {
-                path = path ? path + '.' + cur : cur;
+                path = path ? '' + path + pathSplitter + cur : cur;
                 changes[path] = dummy;
                 return path;
             }, '');
@@ -207,7 +210,7 @@ var fns = exports.fns = {
             return fns.traverse(obj, function (value, key, path) {
 
                 if (hasPath) {
-                    path = contextPath + '.' + path;
+                    path = '' + contextPath + pathSplitter + path;
                 }
 
                 if (!changes.hasOwnProperty(path)) {
@@ -259,7 +262,7 @@ var fns = exports.fns = {
 
         fns.forEachInObject(obj, function (val, key) {
 
-            var path = context ? context + '.' + key : key;
+            var path = context ? context + pathSplitter + key : key;
             var isObj = isObject(val);
 
             var shouldContinue = cb(val, key, path, obj, isObj);

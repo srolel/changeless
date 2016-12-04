@@ -1,10 +1,11 @@
-import { expect, default as chai } from 'chai';
-import sinon from 'sinon';
-import sinonChai from 'sinon-chai';
-import imm, { fns } from '../src/index';
-import { time } from './utils';
-import _ from 'lodash';
-import now from 'performance-now';
+const chai = require('chai');
+const {expect} = chai;
+const sinon = require('sinon');
+const sinonChai = require('sinon-chai');
+const {default: imm, fns} = require('../src/index');
+const { time } = require('./utils');
+const _ = require('lodash');
+const now = require('performance-now');
 
 chai.use(sinonChai);
 const {set, merge, withMutations} = imm;
@@ -20,6 +21,37 @@ afterEach(() => {
     _.forEach(fns, (val) =>
         _.isFunction(val) && val.restore());
 });
+
+describe('fns', () => {
+    describe('traverse', () => {
+        it('should traverse an object', () => {
+
+            const gen = (n) => {
+                let obj = {};
+                for (let j = 0; j < n; j++) {
+                    obj[j] = {};
+                    for (let i = 0; i < n; i++) {
+                        obj[j][i] = {};
+                        for (let k = 0; k < n; k++) {
+                            obj[j][i][k] = { k: k };
+                        }
+                    }
+                }
+                return obj;
+            };
+
+            const n = 4;
+
+            const obj = gen(n);
+            const spy = sinon.spy();
+            fns.traverse(obj, (val, key, path, obj, isObj) => {
+                spy(key);
+            });
+            expect(spy).to.have.callCount(n + n*n + 2*n*n*n )
+
+        });
+    });
+})
 
 describe('set', () => {
     it('should return a different object reference', () => {
@@ -37,7 +69,7 @@ describe('set', () => {
         expect(arr).to.eql([1]);
         expect(newArr).to.not.equal(arr);
         expect(newArr[0]).to.equal(2);
-        expect(fns.cloneArray).to.have.been.calledOnce;
+        expect(fns.cloneArray).to.have.been.calledTwice;
     });
 
     it('should work with array path', () => {
@@ -145,7 +177,7 @@ describe('merge', () => {
         };
         const merged = imm(users).merge(ages1, ages2).value();
         expect(merged).to.eql({ 'data': [{ 'user': 'barney', 'age': 30 }, { 'user': 'fred', 'age': 40 }] });
-        expect(fns.cloneArray).to.have.been.calledOnce;
+        expect(fns.cloneArray).to.have.been.calledTwice;
         expect(fns.cloneObject).to.have.been.calledThrice;
 
         // warning is about settings new property on an object
@@ -189,7 +221,7 @@ describe('withMutations', () => {
         expect(obj).to.eql([{ a: 1, b: [1, 2], c: 3 }, { a: 4, d: 5 }]);
         expect(newObj).to.eql([{ a: 2, b: [1, 2], c: 3 }, { a: 4, d: 0 }]);
         expect(fns.cloneObject).to.have.been.calledTwice;
-        expect(fns.cloneArray).to.have.been.calledOnce;
+        expect(fns.cloneArray).to.have.been.calledTwice;
         expect(newObj[0]).to.not.equal(obj[0]);
         expect(newObj[0].b).to.equal(obj[0].b);
     });
