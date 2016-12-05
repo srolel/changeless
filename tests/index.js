@@ -197,7 +197,7 @@ describe('withMutations', () => {
 
 });
 
-desribe('general tests', () => {
+describe('general tests', () => {
     it('should not break with normal JS assignment', () => {
         const obj = {a: 1};
         const newObj = set(obj, 'a', 2);
