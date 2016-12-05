@@ -267,13 +267,15 @@ var fns = {
 
         var keys = [],
             objs = [],
-            paths = [];
+            paths = [],
+            len = 0;
         for (var k in obj) {
-            keys.push(k);
-            objs.push(obj);
-            paths.push(context);
+            keys[len] = k;
+            objs[len] = obj;
+            paths[len] = context;
+            len++;
         }
-        for (var i = 0, len = keys.length; i < len; i++) {
+        for (var i = 0; i < len; i++) {
             var key = keys[i];
             var _obj = objs[i];
             var val = _obj[key];
@@ -286,9 +288,9 @@ var fns = {
             if (isObj && shouldContinue !== false) {
                 var keyObj = _obj[key];
                 for (var _k in keyObj) {
-                    keys.push(_k);
-                    objs.push(keyObj);
-                    paths.push(path);
+                    keys[len] = _k;
+                    objs[len] = keyObj;
+                    paths[len] = path;
                     len++;
                 }
             }

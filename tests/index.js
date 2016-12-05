@@ -22,37 +22,6 @@ afterEach(() => {
         _.isFunction(val) && val.restore());
 });
 
-describe('fns', () => {
-    describe('traverse', () => {
-        it('should traverse an object', () => {
-
-            const gen = (n) => {
-                let obj = {};
-                for (let j = 0; j < n; j++) {
-                    obj[j] = {};
-                    for (let i = 0; i < n; i++) {
-                        obj[j][i] = {};
-                        for (let k = 0; k < n; k++) {
-                            obj[j][i][k] = { k: k };
-                        }
-                    }
-                }
-                return obj;
-            };
-
-            const n = 4;
-
-            const obj = gen(n);
-            const spy = sinon.spy();
-            fns.traverse(obj, (val, key, path, obj, isObj) => {
-                spy(key);
-            });
-            expect(spy).to.have.callCount(n + n*n + 2*n*n*n )
-
-        });
-    });
-})
-
 describe('set', () => {
     it('should return a different object reference', () => {
         const obj = { a: 1 };
@@ -228,23 +197,12 @@ describe('withMutations', () => {
 
 });
 
-// beforeEach(() =>
-//     _.forEach(fns, (val, key) => {
-//         fns[key] = function() {
-//             const nowTime = now();
-//             const ret = val.apply(null, arguments);
-//             fns[key].meta.calls++;
-//             fns[key].meta.time += now() - nowTime;
-//             return ret;
-//         };
-//         fns[key].meta = {calls: 0, time: 0};
-//         fns[key].restore = () => fns[key] = val;
-
-//     }));
-
-// afterEach(() =>
-//     _.forEach(fns, (val, key) => {
-//         const avgTime = fns[key].meta.time / fns[key].meta.calls;
-//         if (avgTime) console.log(key, avgTime)
-//         fns[key].restore();
-//     }));
+desribe('general tests', () => {
+    it('should not break with normal JS assignment', () => {
+        const obj = {a: 1};
+        const newObj = set(obj, 'a', 2);
+        newObj.b = 5;
+        const newerObj = merge(newObj, {a: 1, b: 1});
+        expect(newerObj).to.eql({a: 1 , b:1 });
+    });
+});

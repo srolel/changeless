@@ -6,7 +6,8 @@
   "scripts": {
     "prepublish": "npm run build",
     "preversion": "npm run test",
-    "test": "set NODE_ENV=development&& mocha tests",
+    "test": "set NODE_ENV=development&& mocha tests/index.js",
+    "test:perf": "set NODE_ENV=production&&mocha tests/perf.js",
     "bench": "node benchmarks/index",
     "build": "babel src --out-dir build",
     "test:watch": "set NODE_ENV=development&&mocha tests -w"
